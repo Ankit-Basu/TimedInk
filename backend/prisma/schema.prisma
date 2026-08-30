@@ -1,0 +1,132 @@
+// Outbox Pilot — data model.
+//
+// MySQL is the source of truth for every scheduled email. Redis/BullMQ is a
+// *derived* index of work-to-do that can be rebuilt from these tables at any
+// time (see src/services/reconciliation.ts). Nothing important lives only in
+// Redis.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailStatus {
+  PENDING
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum EmailEventType {
+  CREATED
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+  OPENED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  mailboxes       Mailbox[]
+  scheduledEmails ScheduledEmail[]
+
+  @@map("users")
+}
+
+model Mailbox {
+  id        String   @id @default(uuid())
+  userId    String
+  fromName  String
+  fromEmail String
+  // Ceiling on sends per UTC day. Kept denormalised (rather than derived from
+  // warmupDay on read) so an operator can override a single mailbox by hand.
+  dailyLimit Int     @default(10)
+  // Warmup ramp position. day N -> min(10 * N, 100); see src/services/warmup.ts
+  warmupDay Int      @default(1)
+  createdAt DateTime @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduledEmails ScheduledEmail[]
+
+  @@index([userId])
+  @@map("mailboxes")
+}
+
+model ScheduledEmail {
+  id          String   @id @default(uuid())
+  userId      String
+  mailboxId   String?
+  to          String
+  cc          String?
+  subject     String   @db.VarChar(998)
+  bodyHtml    String   @db.Text
+  bodyText    String   @db.Text
+  // Always stored in UTC. `timezone` records the IANA zone the user composed
+  // in, so we can render the original wall-clock time back to them.
+  scheduledAt DateTime
+  timezone    String   @default("UTC")
+
+  status      EmailStatus @default(PENDING)
+  attempts    Int         @default(0)
+  lastError   String?     @db.Text
+  bullJobId   String?
+  previewUrl  String?     @db.Text
+
+  // Bonus A — informational only, never blocks a send.
+  deliverabilityScore Int?
+  deliverabilityFlags Json?
+
+  // Bonus C — follow-up sequencing + open tracking.
+  followUpOfId       String?
+  followUpAfterHours Int?
+  followUpQueuedAt   DateTime?
+  openedAt           DateTime?
+
+  /// Denormalised send time. The SENT EmailEvent is the audit record; this
+  /// column exists so the follow-up sweeper is one indexed query, not a join.
+  sentAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailbox    Mailbox?         @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+  followUpOf ScheduledEmail?  @relation("FollowUpChain", fields: [followUpOfId], references: [id], onDelete: SetNull)
+  followUps  ScheduledEmail[] @relation("FollowUpChain")
+  events     EmailEvent[]
+
+  @@index([userId, status])
+  // Drives the reconciliation sweep and the follow-up checker.
+  @@index([status, scheduledAt])
+  @@index([mailboxId])
+  @@index([followUpOfId])
+  // Follow-up sweeper: "SENT, tracking on, not yet followed up".
+  @@index([status, followUpQueuedAt])
+  @@map("scheduled_emails")
+}
+
+model EmailEvent {
+  id               String         @id @default(uuid())
+  scheduledEmailId String
+  type             EmailEventType
+  meta             Json?
+  createdAt        DateTime       @default(now())
+
+  scheduledEmail ScheduledEmail @relation(fields: [scheduledEmailId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledEmailId, createdAt])
+  @@map("email_events")
+}
