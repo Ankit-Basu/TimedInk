@@ -1,7 +1,8 @@
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
 
-loadDotenv();
+// `quiet` suppresses dotenv v17 promo output — the demo log should be signal only.
+loadDotenv({ quiet: true });
 
 /**
  * Every knob the app has lives here. Parsing happens once, at import time, and
