@@ -1,15 +1,13 @@
-<div align="center">
+# TimedInk
 
-# ⏱ TimedInk
+A scheduled email sender: compose an email, pick a send time in your own timezone, and have it
+go out reliably — surviving process restarts, a wiped Redis, and a provider that will throttle
+you if you send too fast.
 
-### *Every email, perfectly timed — down to the second.*
-
-**A premium scheduled email platform with resilient delivery, rate limiting, and a stunning glassmorphic UI.**
-
-Built as a take-home assignment for **[Outbox Labs](https://reachinbox.ai/)** — the team behind
-[ReachInbox.ai](https://reachinbox.ai/) · [Zapmail.ai](https://zapmail.ai/) · [Mailverify.ai](https://mailverify.ai/)
-
-</div>
+Built as a take-home assignment for [ReachInbox](https://reachinbox.ai/). Node + TypeScript +
+Express + Prisma/MySQL + BullMQ/Redis on the back, React + Vite + TanStack Query on the front,
+Nodemailer against [Ethereal Email](https://ethereal.email) so every "sent" message has a real,
+viewable preview.
 
 ---
 
@@ -83,7 +81,7 @@ Open <http://localhost:5173> and sign in with the seeded account (the login form
 pre-filled with it):
 
 ```
-email:    demo@outboxpilot.dev
+email:    demo@timedink.dev
 password: demo1234
 ```
 
@@ -161,13 +159,15 @@ The Vite dev server proxies `/api` to `http://localhost:4000`, so the browser st
 origin and there is no CORS preflight on every dashboard poll. Set `VITE_API_BASE_URL` if you
 would rather the browser hit the API directly. See `frontend/.env.example`.
 
-**UI stack:** React 19 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query. The interface
-features a **premium glassmorphic dark theme** with:
-- **MoltenMetal WebGL shader backgrounds** (via `ogl`) — interactive, mouse-responsive
-- **Frosted glass panels** with `backdrop-blur` and translucent borders
-- **Gradient accents** (violet → fuchsia) with glow hover effects
-- **Premium typography** using Inter (body) and Outfit (headings) from Google Fonts
-- **Smooth micro-animations** for entrance, hover, and state transitions
+**UI stack:** React 19 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query. No component
+library, no animation library, no webfont — the four runtime dependencies are React, React DOM,
+React Router and TanStack Query.
+
+The interface is deliberately plain. This is an operations tool: its job is to make a table of
+email states scannable at a glance, so depth is a 1px border and a flat surface step rather than
+blur or shadow, colour is one accent plus six functional status hues, and the type is the system
+stack at 13-14px with tabular numerals so timestamps and counts do not jitter as they tick. The
+whole design system is ~140 lines of tokens in [`index.css`](frontend/src/index.css).
 
 ---
 
@@ -390,13 +390,13 @@ Without the limiter these 40 would have gone out in roughly two seconds.
 | Feature | Implemented in |
 | --- | --- |
 | **Login / Register** | [`LoginPage.tsx`](frontend/src/pages/LoginPage.tsx) · [`RegisterPage.tsx`](frontend/src/pages/RegisterPage.tsx) · [`auth.tsx`](frontend/src/lib/auth.tsx) |
-| **Dashboard** (stat cards, tabs, polling) | [`DashboardPage.tsx`](frontend/src/pages/DashboardPage.tsx) |
+| **Dashboard** (status tabs, polling) | [`DashboardPage.tsx`](frontend/src/pages/DashboardPage.tsx) |
 | **Tables** (per-status, preview links) | [`EmailTable.tsx`](frontend/src/features/emails/EmailTable.tsx) |
 | **Compose** (tz-aware picker) | [`ComposeModal.tsx`](frontend/src/features/emails/ComposeModal.tsx) |
 | **Cancellation** | via [`scheduling.ts`](backend/src/services/scheduling.ts) (`cancelScheduledEmail`) |
 | **Mailbox panel** (warmup, rotation) | [`MailboxPanel.tsx`](frontend/src/features/mailboxes/MailboxPanel.tsx) |
-| **MoltenMetal background** | [`MoltenMetal.tsx`](frontend/src/components/MoltenMetal.tsx) — WebGL shader via `ogl` |
-| **Glassmorphic design system** | [`index.css`](frontend/src/index.css) · [`ui.tsx`](frontend/src/components/ui.tsx) |
+| **Design system / shared UI** | [`index.css`](frontend/src/index.css) (tokens) · [`ui.tsx`](frontend/src/components/ui.tsx) (button, field, status, states) |
+| **Toasts** | [`toast.tsx`](frontend/src/lib/toast.tsx) |
 
 ---
 

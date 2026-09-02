@@ -195,6 +195,45 @@ reputation, none of which are meaningful against Ethereal.
 
 ---
 
+## 4a. Interface decisions
+
+### 4a.1 The UI is deliberately plain — **Done**
+
+An earlier pass built this as a glassmorphic dark theme: a WebGL particle field, four levels of
+`backdrop-filter` glass, violet-to-aqua gradients, animated counters, spotlight cards and a
+grain overlay. It was rebuilt flat, and the reasons are worth stating because "less" was the
+harder call:
+
+- **It fought the data.** This screen exists to answer "what is queued, what went out, what
+  broke". Translucent panels over a drifting gradient reduce text contrast and add motion next
+  to a table that is already updating every four seconds.
+- **It cost real performance.** A 140-particle WebGL canvas plus `backdrop-filter` on every
+  panel keeps the GPU busy continuously, on a dashboard people leave open all day.
+- **One widget was actively dishonest.** The stat cards carried a progress bar whose width was
+  `min(100, value * 8)` — a bar that encoded nothing, filling up as a number grew with no
+  denominator behind it. It has been removed rather than restyled.
+
+What replaced it: one accent colour, six functional status hues, flat surfaces separated by a
+1px border, the system font stack, and tabular numerals so timestamps and counts do not jitter.
+`index.css` went from ~530 lines to ~140. `ogl` and `framer-motion` were removed, taking the
+runtime dependency list down to React, React DOM, React Router and TanStack Query.
+
+### 4a.2 Dark-only, with no theme toggle — **Deliberate**
+
+The palette is defined once as CSS custom properties in `index.css`, so a light theme is a token
+swap rather than a rewrite, but no light variant is shipped and there is no toggle. Two themes
+means two sets of contrast decisions to verify, and only one of them would get demoed.
+
+### 4a.3 Density over comfort — **Deliberate**
+
+13px base type, ~44px rows, seven columns fixed with a `colgroup`. That is denser than a
+marketing site and about right for an operator scanning a send queue. The table sets a
+940px minimum width and scrolls horizontally below it rather than reflowing or hiding columns,
+because on a phone the honest answer is that this view needs a different layout, not a squeezed
+one — which is not built.
+
+---
+
 ## 5. Environment and operational assumptions
 
 - **Single-tenant-ish.** Every query is scoped by `userId`, but there is no organisation/team
