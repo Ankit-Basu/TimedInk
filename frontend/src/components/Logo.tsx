@@ -1,31 +1,30 @@
 /**
  * Wordmark.
  *
- * A clock hand sweeping through a filled dot — the "timed" half of the name.
- * Flat, monochrome, and it inherits `currentColor`, so it works on any surface
- * without a second asset.
+ * A clock hand inside a ring — the "timed" half of the name — set against the
+ * display serif. The mark inherits `currentColor` so it needs no second asset.
  */
-export default function Logo({ size = 20 }: { size?: number }) {
+export default function Logo({ size = 18 }: { size?: number }) {
   return (
-    <span className="flex items-center gap-2 text-fg">
+    <span className="flex items-baseline gap-2.5 text-ink">
       <svg
         width={size}
         height={size}
         viewBox="0 0 20 20"
         fill="none"
         aria-hidden="true"
-        className="shrink-0 text-accent"
+        className="shrink-0 translate-y-[2px]"
       >
-        <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.3" />
         <path
-          d="M10 5.5V10l3 2"
+          d="M10 5.4V10.2l3.1 2"
           stroke="currentColor"
-          strokeWidth="1.6"
+          strokeWidth="1.3"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </svg>
-      <span className="text-[15px] font-semibold tracking-tight">TimedInk</span>
+      <span className="display text-[19px] tracking-tight">TimedInk</span>
     </span>
   );
 }

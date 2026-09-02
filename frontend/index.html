@@ -3,13 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light" />
     <meta name="description" content="TimedInk — schedule email and watch it actually go out." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>TimedInk</title>
+
+    <!--
+      Three faces, each with a system fallback in index.css so the app stays
+      legible if these never arrive: Instrument Serif for display, Inter for
+      running text, JetBrains Mono for labels and figures.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <style>
       /* Painted before the CSS bundle lands, so there is no white flash. */
-      html, body { background-color: #101215; }
+      html, body { background-color: #f4f1e9; }
     </style>
   </head>
   <body>

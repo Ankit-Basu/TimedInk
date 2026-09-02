@@ -1,50 +1,52 @@
 @import 'tailwindcss';
 
 /**
- * TimedInk design tokens.
+ * TimedInk — editorial design system.
  *
- * Deliberately plain: a neutral surface scale, one accent, and functional
- * status colours. This is an operations tool — the job of the interface is to
- * make a table of email states scannable at a glance, so there is no
- * glassmorphism, no gradient fills, no ambient animation competing with the
- * data. Depth is expressed with a 1px border and a flat surface step, which is
- * how real dashboards (GitHub, Linear, Stripe) do it.
+ * Warm paper canvas, ink type, hairline rules, one amber accent, and monospace
+ * for the small stuff (labels, timestamps, counts). Depth comes from a 1px rule
+ * and a surface that is a shade lighter than the canvas — never from shadow.
+ *
+ * Type is doing real work here, so three faces earn their place:
+ *   Instrument Serif — display only (page titles, the auth headline)
+ *   Inter            — every piece of running text and UI
+ *   JetBrains Mono   — micro-labels, timestamps, scores, counts
+ * Each has a full system fallback, so the app stays legible offline.
  */
 @theme {
-  /* Surfaces — a plain neutral ramp, slightly cool. */
-  --color-bg: #101215;
-  --color-surface: #16191d;
-  --color-surface-2: #1c2026;
-  --color-surface-3: #23272e;
+  /* Canvas and surfaces. */
+  --color-paper: #f4f1e9;
+  --color-surface: #fdfcf8;
+  --color-surface-2: #f7f4ec;
+  --color-surface-3: #efeade;
 
-  /* Borders */
-  --color-line: #272b32;
-  --color-line-strong: #363b44;
+  /* Rules. Hairlines, not borders. */
+  --color-rule: #e2dccf;
+  --color-rule-strong: #cdc5b4;
 
-  /* Text */
-  --color-fg: #e8eaed;
-  --color-fg-secondary: #a2a9b4;
-  --color-fg-muted: #6e7681;
+  /* Ink. */
+  --color-ink: #1c1a15;
+  --color-ink-2: #5a544a;
+  --color-ink-3: #8c8579;
 
-  /* One accent. Used for primary actions, focus rings and the active tab. */
-  --color-accent: #4b7bec;
-  --color-accent-hover: #5d89f0;
-  --color-accent-quiet: #1b2740;
+  /* One accent, used for primary actions and the active marker. */
+  --color-accent: #e5a13c;
+  --color-accent-hover: #d9922b;
+  --color-accent-soft: #fbf0dc;
 
-  /* Status — muted enough to sit in a dense table without shouting. */
-  --color-st-pending: #9aa1ac;
-  --color-st-queued: #6ea8e0;
-  --color-st-sending: #d4a548;
-  --color-st-sent: #46b17b;
-  --color-st-failed: #d9635f;
-  --color-st-cancelled: #767d88;
+  /* Status — earthy and muted, so a dense table does not turn into a fruit bowl. */
+  --color-st-pending: #7a736a;
+  --color-st-queued: #3d6291;
+  --color-st-sending: #96681a;
+  --color-st-sent: #3f6b4c;
+  --color-st-failed: #a8443a;
+  --color-st-cancelled: #948d81;
 
-  --color-danger: #d9635f;
+  --color-danger: #a8443a;
 
-  /* System stack: no webfont round-trip, and it never reads as a template. */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 html,
@@ -54,82 +56,143 @@ body,
 }
 
 body {
-  background-color: var(--color-bg);
-  color: var(--color-fg);
+  background-color: var(--color-paper);
+  /*
+    A whisper of vertical striping on the outer canvas — the frame's surface
+    sits flat on top of it, so the texture only ever shows in the margins.
+  */
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(28, 26, 21, 0.016) 0 1px,
+    transparent 1px 5px
+  );
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Numbers in tables, counts and timers should not jitter as they tick. */
-.tabular {
+/* --- type helpers --------------------------------------------------------- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+}
+
+/*
+  The recurring micro-label: uppercase mono, widely tracked, ink-3. Used for
+  column heads, section eyebrows and metadata — it is what gives the layout its
+  drafting-table register.
+*/
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+.mono {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* One shared focus treatment, so keyboard navigation is obvious everywhere. */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-accent);
+/* --- shell ---------------------------------------------------------------- */
+
+/*
+  The whole app sits inside a ruled frame with the paper showing around it.
+  Borrowed from print: the margin is what makes the content read as a composed
+  page rather than as a browser window.
+*/
+.frame {
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface);
+}
+
+/* --- focus ---------------------------------------------------------------- */
+
+:where(a, button, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 2px;
+}
+
+/*
+  Inputs are underline-only, so a full outline box would draw a rectangle
+  around a field that has no rectangle. They get their own indicator instead:
+  the baseline rule doubles in weight and goes to full ink, and the field takes
+  a faint tint — two simultaneous changes, both well clear of the resting state.
+*/
+:where(input, textarea):focus-visible {
+  outline: none;
+  box-shadow: inset 0 -2px 0 0 var(--color-ink);
+  background-color: var(--color-surface-2);
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
 }
 
-/* Make the native picker icon legible on a dark control. */
 input[type='datetime-local']::-webkit-calendar-picker-indicator {
-  filter: invert(0.75);
   cursor: pointer;
+  opacity: 0.5;
+}
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-line-strong);
-  border: 3px solid var(--color-bg);
+  background: var(--color-rule-strong);
+  border: 3px solid var(--color-surface);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #454b55;
+  background: var(--color-ink-3);
 }
 
-/* Loading placeholder. A quiet pulse, not a travelling shimmer. */
+/* --- states --------------------------------------------------------------- */
+
 @keyframes skeleton-pulse {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.45;
+    opacity: 0.4;
   }
 }
 
 .skeleton {
-  background: var(--color-surface-2);
-  border-radius: 4px;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  background: var(--color-surface-3);
+  border-radius: 2px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Toasts enter from the right and leave in place. */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(12px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
 .toast-enter {
-  animation: toast-in 0.16s ease-out;
+  animation: toast-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
