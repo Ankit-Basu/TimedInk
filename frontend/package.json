@@ -1,5 +1,5 @@
 {
-  "name": "outbox-pilot-frontend",
+  "name": "timedink-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
-    "framer-motion": "^13.1.1",
-    "ogl": "^1.0.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"
