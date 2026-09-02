@@ -1,10 +1,14 @@
 @import 'tailwindcss';
 
 /**
- * TimedInk — True Glassmorphism Design Tokens & System
+ * TimedInk — Premium dark design system v2.
  *
- * Designed with 4-level elevation, frosted noise micro-texture,
- * ambient glow variants, and dynamic gradient focus states.
+ * Key changes from v1:
+ * - Killed gradient buttons — solid violet accent only
+ * - Shifted status colors off Tailwind defaults
+ * - Added noise/grain overlay for anti-plastic texture
+ * - Varied border-radius per elevation level
+ * - Added SpotlightCard, StarBorder, and Particles CSS
  */
 @theme {
   /* ── Core Palette ─────────────────────────────────────────────────── */
@@ -14,7 +18,6 @@
   --color-line: rgba(255, 255, 255, 0.08);
   --color-canvas: #070714;
   --color-brand: #8b5cf6;
-  --color-brand-pink: #d946ef;
 
   /* ── 4-Level Glass Elevation System ──────────────────────────────── */
   --glass-1-bg: rgba(255, 255, 255, 0.035);
@@ -37,13 +40,30 @@
   --glass-4-border: rgba(255, 255, 255, 0.18);
   --glass-4-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 24px 64px rgba(0, 0, 0, 0.65);
 
-  /* ── Accents ──────────────────────────────────────────────────────── */
-  --color-accent-purple: #8b5cf6;
-  --color-accent-pink: #d946ef;
-  --color-accent-emerald: #10b981;
-  --color-accent-amber: #f59e0b;
-  --color-accent-red: #ef4444;
-  --color-accent-blue: #3b82f6;
+  /* ── Custom Status Colors (shifted off Tailwind defaults) ────────── */
+  --status-sent: #2dd4a0;
+  --status-sent-bg: rgba(45, 212, 160, 0.12);
+  --status-sent-ring: rgba(45, 212, 160, 0.28);
+
+  --status-failed: #e86060;
+  --status-failed-bg: rgba(232, 96, 96, 0.12);
+  --status-failed-ring: rgba(232, 96, 96, 0.28);
+
+  --status-cancelled: #8b95a5;
+  --status-cancelled-bg: rgba(139, 149, 165, 0.10);
+  --status-cancelled-ring: rgba(139, 149, 165, 0.22);
+
+  --status-pending: #a0a8b8;
+  --status-pending-bg: rgba(160, 168, 184, 0.12);
+  --status-pending-ring: rgba(160, 168, 184, 0.25);
+
+  --status-queued: #6ea8e0;
+  --status-queued-bg: rgba(110, 168, 224, 0.12);
+  --status-queued-ring: rgba(110, 168, 224, 0.28);
+
+  --status-sending: #e8b84d;
+  --status-sending-bg: rgba(232, 184, 77, 0.12);
+  --status-sending-ring: rgba(232, 184, 77, 0.28);
 
   /* ── Typography ───────────────────────────────────────────────────── */
   --font-heading: 'Outfit', system-ui, sans-serif;
@@ -64,19 +84,27 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Frosted Micro-Noise Overlay ────────────────────────────────────── */
-.glass-grain {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+/* ── Global Noise / Grain Overlay (2% opacity) ──────────────────────── */
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
-/* ── 4 Elevation Classes ────────────────────────────────────────────── */
+/* ── 4 Elevation Classes (varied border-radius) ────────────────────── */
 .elevation-1 {
   background-color: var(--glass-1-bg);
   backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
   border: 1px solid var(--glass-1-border);
   box-shadow: var(--glass-1-shadow);
-  border-radius: 0.875rem;
+  border-radius: 0.75rem; /* 12px — stat cards, compact items */
 }
 
 .elevation-2 {
@@ -85,7 +113,7 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-2-blur)) saturate(180%);
   border: 1px solid var(--glass-2-border);
   box-shadow: var(--glass-2-shadow);
-  border-radius: 1rem;
+  border-radius: 1rem; /* 16px — table panels */
 }
 
 .elevation-3 {
@@ -94,7 +122,7 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-3-blur)) saturate(190%);
   border: 1px solid var(--glass-3-border);
   box-shadow: var(--glass-3-shadow);
-  border-radius: 1.125rem;
+  border-radius: 0.875rem; /* 14px — sidebar panels */
 }
 
 .elevation-4 {
@@ -103,97 +131,116 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-4-blur)) saturate(200%);
   border: 1px solid var(--glass-4-border);
   box-shadow: var(--glass-4-shadow);
-  border-radius: 1.25rem;
+  border-radius: 1.25rem; /* 20px — modals (distinct from everything) */
 }
 
-/* Aliases for backwards compatibility */
-.glass-panel {
-  background-color: var(--glass-2-bg);
-  backdrop-filter: blur(var(--glass-2-blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-2-blur)) saturate(180%);
-  border: 1px solid var(--glass-2-border);
-  box-shadow: var(--glass-2-shadow);
-  border-radius: 1rem;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
-}
-
-.glass-panel-sm {
-  background-color: var(--glass-1-bg);
-  backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
-  border: 1px solid var(--glass-1-border);
-  box-shadow: var(--glass-1-shadow);
-  border-radius: 0.75rem;
-}
-
-/* ── Ambient Colored Glass Stat Cards ──────────────────────────────── */
-.ambient-card {
+/* ── SpotlightCard CSS ─────────────────────────────────────────────── */
+.spotlight-card {
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--glass-1-bg);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.35);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--glass-1-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.ambient-card:hover {
+.spotlight-card:hover {
   transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 12px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
-.ambient-card::before {
-  content: '';
+.spotlight-card-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  opacity: 0.15;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.35s ease;
+  z-index: 1;
 }
 
-.ambient-purple {
-  border: 1px solid rgba(139, 92, 246, 0.22);
-}
-.ambient-purple::before {
-  background: radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.45), transparent 70%);
-}
-.ambient-purple:hover::before {
-  opacity: 0.28;
+.spotlight-card-content {
+  position: relative;
+  z-index: 2;
 }
 
-.ambient-emerald {
-  border: 1px solid rgba(16, 185, 129, 0.22);
-}
-.ambient-emerald::before {
-  background: radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.45), transparent 70%);
-}
-.ambient-emerald:hover::before {
-  opacity: 0.28;
+/* ── StarBorder CSS ────────────────────────────────────────────────── */
+.star-border-container {
+  display: inline-flex;
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
-.ambient-red {
-  border: 1px solid rgba(239, 68, 68, 0.22);
-}
-.ambient-red::before {
-  background: radial-gradient(circle at 80% 20%, rgba(239, 68, 68, 0.45), transparent 70%);
-}
-.ambient-red:hover::before {
-  opacity: 0.28;
-}
-
-.ambient-amber {
-  border: 1px solid rgba(245, 158, 11, 0.22);
-}
-.ambient-amber::before {
-  background: radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.45), transparent 70%);
-}
-.ambient-amber:hover::before {
-  opacity: 0.28;
+.border-gradient-bottom {
+  position: absolute;
+  width: 300%;
+  height: 50%;
+  opacity: 0.7;
+  bottom: -12px;
+  right: -250%;
+  border-radius: 50%;
+  animation: star-movement-bottom linear infinite alternate;
+  z-index: 0;
 }
 
-/* ── Interactive Gradient Border Elements ───────────────────────────── */
+.border-gradient-top {
+  position: absolute;
+  opacity: 0.7;
+  width: 300%;
+  height: 50%;
+  top: -12px;
+  left: -250%;
+  border-radius: 50%;
+  animation: star-movement-top linear infinite alternate;
+  z-index: 0;
+}
+
+.star-border-inner {
+  position: relative;
+  background: rgba(139, 92, 246, 1);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease;
+}
+
+.star-border-container:hover .star-border-inner {
+  background: rgba(124, 78, 230, 1);
+}
+
+.star-border-container:active .star-border-inner {
+  transform: scale(0.98);
+}
+
+.star-border-container:disabled .star-border-inner,
+.star-border-container[disabled] .star-border-inner {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes star-movement-bottom {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+
+@keyframes star-movement-top {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
+}
+
+/* ── Interactive Glass Inputs ──────────────────────────────────────── */
 .interactive-glass {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -210,23 +257,23 @@ body {
 .interactive-glass:focus,
 .interactive-glass:focus-within {
   background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(217, 70, 239, 0.5);
+  border-color: rgba(139, 92, 246, 0.55);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 20px rgba(139, 92, 246, 0.25);
   outline: none;
 }
 
-/* ── Hairline Gradient Dividers ────────────────────────────────────── */
+/* ── Hairline Dividers ─────────────────────────────────────────────── */
 .hairline-gradient-bottom {
   border-bottom: 1px solid transparent;
-  border-image: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.12) 20%, rgba(139, 92, 246, 0.3) 50%, rgba(255, 255, 255, 0.12) 80%, transparent) 1;
+  border-image: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.12) 20%, rgba(139, 92, 246, 0.25) 50%, rgba(255, 255, 255, 0.12) 80%, transparent) 1;
 }
 
 .hairline-gradient-divider {
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1) 20%, rgba(139, 92, 246, 0.25) 50%, rgba(255, 255, 255, 0.1) 80%, transparent);
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1) 20%, rgba(139, 92, 246, 0.2) 50%, rgba(255, 255, 255, 0.1) 80%, transparent);
 }
 
-/* ── Custom Date-time Picker Styling ───────────────────────────────── */
+/* ── Date Picker ───────────────────────────────────────────────────── */
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8) sepia(1) saturate(5) hue-rotate(220deg);
   cursor: pointer;
@@ -239,20 +286,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ── Custom Scrollbar ──────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
 
 /* ── Shimmer Skeleton ──────────────────────────────────────────────── */
 @keyframes skeleton-shimmer {
@@ -270,45 +307,23 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .skeleton-shimmer::after {
   content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.06) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0) 100%);
   animation: skeleton-shimmer 1.8s infinite;
 }
 
 /* ── Micro-Animations ──────────────────────────────────────────────── */
 @keyframes float-subtle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-6px) rotate(1.5deg); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
-.animate-float {
-  animation: float-subtle 4s ease-in-out infinite;
-}
+.animate-float { animation: float-subtle 4s ease-in-out infinite; }
 
-@keyframes sweep-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.animate-sweep-slow {
-  animation: sweep-slow 16s linear infinite;
-  transform-origin: center;
-}
-
-/* Respect users who ask for less motion */
+/* ── Reduced Motion ────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

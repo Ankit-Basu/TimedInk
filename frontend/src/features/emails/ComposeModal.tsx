@@ -134,16 +134,14 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="w-full max-w-2xl elevation-4 rounded-2xl overflow-hidden my-auto"
+          className="w-full max-w-2xl elevation-4 overflow-hidden my-auto"
         >
-          {/* Header */}
+          {/* Header — no gradient icon badge, just inline icon */}
           <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-[0_0_20px_rgba(139,92,246,0.35)]">
-                <svg className="h-4.5 w-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                </svg>
-              </div>
+              <svg className="h-5 w-5 text-violet-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
               <div>
                 <h2 id="compose-title" className="text-base font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
                   Compose & Schedule
@@ -205,7 +203,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-sm font-medium text-slate-300">
-                  Message Body <span className="text-fuchsia-400">*</span>
+                  Message Body <span className="text-violet-400">*</span>
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-mono text-slate-500">
@@ -230,13 +228,13 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3.5 py-2.5 text-xs text-amber-300"
+                className="rounded-xl bg-[var(--status-sending-bg)] border border-[var(--status-sending-ring)] px-3.5 py-2.5 text-xs text-[var(--status-sending)]"
               >
-                <div className="flex items-center gap-1.5 font-semibold text-amber-200 mb-1">
+                <div className="flex items-center gap-1.5 font-semibold mb-1">
                   <span>⚠️</span>
                   <span>{preview.flags.length} deliverability suggestion{preview.flags.length > 1 ? 's' : ''}:</span>
                 </div>
-                <ul className="space-y-0.5 text-amber-300/90 pl-4 list-disc">
+                <ul className="space-y-0.5 opacity-90 pl-4 list-disc">
                   {preview.flags.map((flag) => (
                     <li key={flag}>{flag}</li>
                   ))}
@@ -244,7 +242,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
               </motion.div>
             )}
 
-            {/* Hairline Gradient Section Divider */}
+            {/* Section Divider */}
             <div className="hairline-gradient-divider my-4" />
 
             {/* Scheduling Controls */}

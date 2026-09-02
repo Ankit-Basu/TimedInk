@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
@@ -7,7 +7,9 @@ import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import EmailTable from '../features/emails/EmailTable';
 import ComposeModal from '../features/emails/ComposeModal';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
-import MoltenMetal from '../components/MoltenMetal';
+import Particles from '../components/Particles';
+import SpotlightCard from '../components/SpotlightCard';
+import CountUp from '../components/CountUp';
 import TimedInkLogo from '../components/TimedInkLogo';
 import type { EmailStatus } from '../lib/types';
 
@@ -65,80 +67,20 @@ const TABS: Tab[] = [
   },
 ];
 
-/** Smooth number counting up on mount/refresh */
-function AnimatedNumber({ value }: { value: number }) {
-  const [display, setDisplay] = useState(value);
-  const prevRef = useRef(value);
+/* Stat card spotlight colors — one per variant */
+const SPOTLIGHT_COLORS: Record<string, string> = {
+  scheduled: 'rgba(139, 92, 246, 0.22)',
+  sent: 'rgba(45, 212, 160, 0.22)',
+  failed: 'rgba(232, 96, 96, 0.22)',
+  cancelled: 'rgba(139, 149, 165, 0.18)',
+};
 
-  useEffect(() => {
-    const start = prevRef.current;
-    const end = value;
-    prevRef.current = value;
-    if (start === end) return;
-
-    const startTime = performance.now();
-    const duration = 650;
-
-    const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(start + (end - start) * ease));
-      if (progress < 1) {
-        requestAnimationFrame(tick);
-      }
-    };
-    requestAnimationFrame(tick);
-  }, [value]);
-
-  return <span>{display}</span>;
-}
-
-interface StatCardProps {
-  label: string;
-  value: number;
-  variant: 'purple' | 'emerald' | 'red' | 'amber';
-  trend: string;
-  delay?: number;
-}
-
-function StatCard({ label, value, variant, trend, delay = 0 }: StatCardProps) {
-  const variantClass = {
-    purple: 'ambient-purple text-violet-300',
-    emerald: 'ambient-emerald text-emerald-300',
-    red: 'ambient-red text-red-300',
-    amber: 'ambient-amber text-amber-300',
-  }[variant];
-
-  const trendColors = {
-    purple: 'text-violet-400/80',
-    emerald: 'text-emerald-400/80',
-    red: 'text-red-400/80',
-    amber: 'text-amber-400/80',
-  }[variant];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-      className={`ambient-card ${variantClass} p-4`}
-    >
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-        <span className={`text-[10px] font-medium ${trendColors} flex items-center gap-1`}>
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-current opacity-75" />
-          {trend}
-        </span>
-      </div>
-      <div className="mt-2 flex items-baseline justify-between">
-        <p className="text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: 'var(--font-heading)' }}>
-          <AnimatedNumber value={value} />
-        </p>
-      </div>
-    </motion.div>
-  );
-}
+const STAT_TEXT_COLORS: Record<string, string> = {
+  scheduled: 'text-violet-300',
+  sent: 'text-[var(--status-sent)]',
+  failed: 'text-[var(--status-failed)]',
+  cancelled: 'text-[var(--status-cancelled)]',
+};
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -187,34 +129,35 @@ export default function DashboardPage() {
   const failedCount = countFor(TABS[2]!);
   const cancelledCount = countFor(TABS[3]!);
 
+  const stats = [
+    { id: 'scheduled', label: 'Scheduled', value: scheduledCount, trend: scheduledCount > 0 ? `${scheduledCount} in queue` : 'queue clear' },
+    { id: 'sent', label: 'Sent', value: sentCount, trend: `${sentCount} delivered` },
+    { id: 'failed', label: 'Failed', value: failedCount, trend: failedCount === 0 ? 'zero errors' : `${failedCount} flagged` },
+    { id: 'cancelled', label: 'Cancelled', value: cancelledCount, trend: `${cancelledCount} retracted` },
+  ];
+
   const pagination = emailsQuery.data?.pagination;
 
   return (
     <div className="relative min-h-full selection:bg-violet-500/30">
-      {/* MoltenMetal WebGL Background */}
+      {/* Particles Background (lightweight, replaces MoltenMetal) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <MoltenMetal
-          color1="#5227FF"
-          color2="#FF9FFC"
-          color3="#FFFFFF"
-          speed={0.18}
-          scale={4.5}
-          detail={2}
-          glow={1.1}
-          coreSize={0.08}
-          swirl={0.7}
-          fold={-0.12}
-          blackPoint={0.12}
-          brightness={0.75}
-          colorMode="molten"
-          grain
-          grainIntensity={0.03}
-          mouseInteraction={false}
-          opacity={0.22}
+        <Particles
+          particleColors={['#8B5CF6', '#6d52c6', '#3b2a7a']}
+          particleCount={120}
+          particleSpread={12}
+          speed={0.08}
+          particleBaseSize={80}
+          moveParticlesOnHover={false}
+          alphaParticles
+          disableRotation={false}
+          sizeRandomness={0.6}
+          cameraDistance={22}
+          className="opacity-30"
         />
       </div>
 
-      {/* Sticky Header with Hairline Gradient Edge */}
+      {/* Sticky Header */}
       <header className="sticky top-0 z-30 hairline-gradient-bottom bg-black/40 backdrop-blur-xl transition-all">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <TimedInkLogo size={32} showWordmark={true} />
@@ -238,36 +181,37 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {/* Stat cards in tight ambient grid */}
-        <div className="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-          <StatCard
-            label="Scheduled"
-            value={scheduledCount}
-            variant="purple"
-            trend={scheduledCount > 0 ? `${scheduledCount} in queue` : 'queue clear'}
-            delay={0}
-          />
-          <StatCard
-            label="Sent"
-            value={sentCount}
-            variant="emerald"
-            trend={`${sentCount} delivered`}
-            delay={0.04}
-          />
-          <StatCard
-            label="Failed"
-            value={failedCount}
-            variant="red"
-            trend={failedCount === 0 ? 'zero errors' : `${failedCount} flagged`}
-            delay={0.08}
-          />
-          <StatCard
-            label="Cancelled"
-            value={cancelledCount}
-            variant="amber"
-            trend={`${cancelledCount} retracted`}
-            delay={0.12}
-          />
+        {/* SpotlightCard Stat Grid */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <SpotlightCard
+                spotlightColor={SPOTLIGHT_COLORS[stat.id]}
+                spotlightSize={260}
+                className={stat.id === 'scheduled' ? 'border-violet-500/20' : ''}
+              >
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                    <span className={`text-[10px] font-medium ${STAT_TEXT_COLORS[stat.id]} opacity-70 flex items-center gap-1`}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-current opacity-75" />
+                      {stat.trend}
+                    </span>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: 'var(--font-heading)' }}>
+                      <CountUp from={0} to={stat.value} duration={1.2} separator="," />
+                    </p>
+                  </div>
+                </div>
+              </SpotlightCard>
+            </motion.div>
+          ))}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -292,11 +236,11 @@ export default function DashboardPage() {
                         active ? 'text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      {/* Sliding active pill indicator */}
+                      {/* Solid sliding active pill (no gradient glow) */}
                       {active && (
                         <motion.div
                           layoutId="active-tab-pill"
-                          className="absolute inset-0 rounded-xl bg-white/[0.09] border border-white/15 shadow-[0_0_16px_rgba(139,92,246,0.2)]"
+                          className="absolute inset-0 rounded-xl bg-white/[0.08] border border-white/[0.12]"
                           transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                         />
                       )}
@@ -305,7 +249,7 @@ export default function DashboardPage() {
                       <span
                         className={`relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all ${
                           active
-                            ? 'bg-violet-500/25 text-violet-200 ring-1 ring-violet-500/40'
+                            ? 'bg-violet-500/20 text-violet-200 ring-1 ring-violet-500/35'
                             : 'bg-white/[0.06] text-slate-500'
                         }`}
                       >
@@ -373,11 +317,11 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Live Auto-Refresh Indicator with pulsing dot & countdown */}
+            {/* Live Auto-Refresh Indicator */}
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 select-none">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--status-sent)] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--status-sent)]" />
               </span>
               <span>
                 Live sync in <span className="font-mono text-slate-400 font-semibold">{secondsUntilPoll}s</span>
@@ -385,7 +329,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* Mailbox Sidebar Panel */}
+          {/* Mailbox Sidebar */}
           <div>
             <MailboxPanel pollIntervalMs={POLL_INTERVAL_MS} />
           </div>

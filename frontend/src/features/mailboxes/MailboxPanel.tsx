@@ -29,9 +29,8 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
 
   if (isPending) {
     return (
-      <aside className="elevation-2 p-5 rounded-2xl">
+      <aside className="elevation-3 p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className="skeleton-shimmer h-6 w-6 rounded-lg" />
           <div className="skeleton-shimmer h-4 w-32 rounded" />
         </div>
         <div className="space-y-4">
@@ -44,25 +43,19 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
 
   if (isError) {
     return (
-      <aside className="elevation-2 p-5 rounded-2xl text-xs text-red-400 border border-red-500/20">
+      <aside className="elevation-3 p-5 text-xs text-[var(--status-failed)]">
         Could not load sending mailboxes.
       </aside>
     );
   }
 
   return (
-    <aside className="elevation-2 p-5 rounded-2xl">
+    <aside className="elevation-3 p-5">
+      {/* Header — no icon badge, just text */}
       <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/30 shadow-[0_0_12px_rgba(139,92,246,0.25)]">
-            <svg className="h-3.5 w-3.5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
-          </div>
-          <h2 className="text-sm font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            Sending Mailboxes
-          </h2>
-        </div>
+        <h2 className="text-sm font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+          Sending Mailboxes
+        </h2>
         <span className="text-[10px] uppercase font-mono text-slate-500 font-semibold tracking-wider">
           Auto-Rotate
         </span>
@@ -78,13 +71,19 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
         </p>
       ) : (
         <ul className="space-y-3">
-          {mailboxes.map((mailbox) => (
-            <MailboxRow
+          {mailboxes.map((mailbox, i) => (
+            <motion.li
               key={mailbox.id}
-              mailbox={mailbox}
-              onAdvance={() => advance.mutate(mailbox.id)}
-              advancing={advance.isPending && advance.variables === mailbox.id}
-            />
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.06 }}
+            >
+              <MailboxRow
+                mailbox={mailbox}
+                onAdvance={() => advance.mutate(mailbox.id)}
+                advancing={advance.isPending && advance.variables === mailbox.id}
+              />
+            </motion.li>
           ))}
         </ul>
       )}
@@ -107,7 +106,7 @@ function MailboxRow({
   const atCap = used >= limit;
 
   return (
-    <li className="group relative rounded-xl elevation-1 p-3.5 transition-all duration-200 hover:border-white/20">
+    <div className="group relative rounded-xl elevation-1 p-3.5 transition-all duration-200 hover:border-white/20">
       <div className="flex items-baseline justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold text-slate-200">{mailbox.fromName}</p>
@@ -118,7 +117,7 @@ function MailboxRow({
         </span>
       </div>
 
-      {/* Glass Capsule Progress Bar */}
+      {/* Solid Progress Bar (no gradient) */}
       <div className="mt-3">
         <div
           className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.06] p-[1px]"
@@ -134,14 +133,14 @@ function MailboxRow({
             transition={{ duration: 0.8, ease: 'easeOut' }}
             className={`h-full rounded-full ${
               atCap
-                ? 'bg-gradient-to-r from-red-500 to-rose-400 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
-                : 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-400 shadow-[0_0_12px_rgba(139,92,246,0.4)]'
+                ? 'bg-[var(--status-failed)]'
+                : 'bg-[#8B5CF6]'
             }`}
           />
         </div>
 
         <div className="mt-1.5 flex items-center justify-between">
-          <span className={`text-[11px] ${atCap ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+          <span className={`text-[11px] ${atCap ? 'text-[var(--status-failed)] font-medium' : 'text-slate-400'}`}>
             <span className="font-semibold text-slate-200">{used}</span> / {limit} sent ({pct}%)
             {atCap && ' · at cap'}
           </span>
@@ -157,6 +156,6 @@ function MailboxRow({
           </Button>
         </div>
       </div>
-    </li>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
-import MoltenMetal from '../components/MoltenMetal';
+import Particles from '../components/Particles';
 import TimedInkLogo from '../components/TimedInkLogo';
 
 /** Matches prisma/seed.ts so a reviewer never has to guess. */
@@ -99,34 +99,27 @@ export function AuthShell({
 }) {
   return (
     <div className="relative flex min-h-full items-center justify-center px-4 py-12 overflow-hidden selection:bg-violet-500/30">
-      {/* MoltenMetal background */}
+      {/* Particles background (replaces MoltenMetal — much lighter) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <MoltenMetal
-          color1="#5227FF"
-          color2="#FF9FFC"
-          color3="#FFFFFF"
-          speed={0.25}
-          scale={4}
-          detail={3}
-          glow={1.6}
-          coreSize={0.1}
-          swirl={1}
-          fold={-0.2}
-          blackPoint={0.05}
-          brightness={1.0}
-          colorMode="molten"
-          grain
-          grainIntensity={0.04}
-          mouseInteraction
-          mouseStrength={0.25}
-          opacity={0.6}
+        <Particles
+          particleColors={['#8B5CF6', '#a78bfa', '#6d52c6']}
+          particleCount={150}
+          particleSpread={10}
+          speed={0.12}
+          particleBaseSize={90}
+          moveParticlesOnHover
+          particleHoverFactor={0.4}
+          alphaParticles
+          disableRotation={false}
+          sizeRandomness={0.8}
+          cameraDistance={20}
+          className="opacity-45"
         />
       </div>
 
       {/* Glass card */}
-      <div className="relative z-10 w-full max-w-sm animate-scale-in">
+      <div className="relative z-10 w-full max-w-sm">
         <div className="mb-6 text-center">
-          {/* Logo Mark */}
           <div className="mx-auto mb-3 flex items-center justify-center">
             <TimedInkLogo size={46} showWordmark={false} />
           </div>

@@ -1,31 +1,20 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 import type { EmailStatus } from '../lib/types';
+import StarBorder from './StarBorder';
 
 /**
- * TimedInk UI vocabulary — true glassmorphic dark-theme components.
+ * TimedInk UI vocabulary v2 — dark-theme components.
+ *
+ * v2 changes:
+ * - Primary buttons: solid violet + StarBorder sweep (no gradient)
+ * - Status colors shifted off Tailwind defaults
+ * - Empty state: left-aligned with asymmetric whitespace
+ * - Removed "icon in rounded-square badge" pattern from EmptyState/ErrorState
  */
 
 // --- buttons ---------------------------------------------------------------
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
-
-const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary:
-    'bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 text-white ' +
-    'hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-400 ' +
-    'hover:shadow-[0_0_24px_rgba(139,92,246,0.5)] border border-white/20 ' +
-    'focus-visible:outline-violet-400',
-  secondary:
-    'interactive-glass text-slate-200 ' +
-    'hover:text-white hover:border-white/20 ' +
-    'focus-visible:outline-violet-400',
-  ghost:
-    'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200',
-  danger:
-    'bg-red-500/10 text-red-300 border border-red-500/25 ' +
-    'hover:bg-red-500/20 hover:text-red-200 hover:border-red-500/40 ' +
-    'focus-visible:outline-red-400',
-};
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -40,14 +29,44 @@ export function Button({
   className = '',
   ...rest
 }: ButtonProps) {
+  const isDisabled = disabled || loading;
+
+  if (variant === 'primary') {
+    return (
+      <StarBorder
+        as="button"
+        color="#8B5CF6"
+        speed="5s"
+        thickness={1}
+        className={`select-none ${isDisabled ? 'opacity-40 pointer-events-none' : ''} ${className}`}
+        disabled={isDisabled}
+        {...rest}
+      >
+        {loading && <Spinner className="h-4 w-4" />}
+        {children}
+      </StarBorder>
+    );
+  }
+
+  const variantStyles: Record<Exclude<ButtonVariant, 'primary'>, string> = {
+    secondary:
+      'interactive-glass text-slate-200 hover:text-white hover:border-white/20 focus-visible:outline-violet-400',
+    ghost:
+      'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200',
+    danger:
+      'bg-[#e86060]/10 text-[#e86060] border border-[#e86060]/25 ' +
+      'hover:bg-[#e86060]/20 hover:text-[#f08080] hover:border-[#e86060]/40 ' +
+      'focus-visible:outline-[#e86060]',
+  };
+
   return (
     <button
       {...rest}
-      disabled={disabled || loading}
+      disabled={isDisabled}
       className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold
         transition-all duration-200 ease-out active:scale-[0.98]
         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-        disabled:cursor-not-allowed disabled:opacity-40 select-none ${BUTTON_STYLES[variant]} ${className}`}
+        disabled:cursor-not-allowed disabled:opacity-40 select-none ${variantStyles[variant]} ${className}`}
     >
       {loading && <Spinner className="h-4 w-4" />}
       {children}
@@ -70,12 +89,12 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-slate-300">
         {label}
-        {required && <span className="ml-0.5 text-fuchsia-400">*</span>}
+        {required && <span className="ml-0.5 text-violet-400">*</span>}
       </span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
       {error && (
-        <span role="alert" className="mt-1 block text-xs text-red-400 font-medium">
+        <span role="alert" className="mt-1 block text-xs text-[#e86060] font-medium">
           {error}
         </span>
       )}
@@ -95,15 +114,15 @@ export const Textarea = ({ className = '', ...rest }: TextareaHTMLAttributes<HTM
   <textarea {...rest} className={`${CONTROL_CLASS} ${className}`} />
 );
 
-// --- status ----------------------------------------------------------------
+// --- status (custom colors, shifted off Tailwind defaults) -----------------
 
 const STATUS_STYLES: Record<EmailStatus, string> = {
-  PENDING: 'bg-slate-500/15 text-slate-300 ring-slate-500/30',
-  QUEUED: 'bg-blue-500/15 text-blue-300 ring-blue-500/30',
-  SENDING: 'bg-amber-500/15 text-amber-300 ring-amber-500/30',
-  SENT: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-  FAILED: 'bg-red-500/15 text-red-300 ring-red-500/30',
-  CANCELLED: 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+  PENDING:  'bg-[var(--status-pending-bg)]  text-[var(--status-pending)]  ring-[var(--status-pending-ring)]',
+  QUEUED:   'bg-[var(--status-queued-bg)]   text-[var(--status-queued)]   ring-[var(--status-queued-ring)]',
+  SENDING:  'bg-[var(--status-sending-bg)]  text-[var(--status-sending)]  ring-[var(--status-sending-ring)]',
+  SENT:     'bg-[var(--status-sent-bg)]     text-[var(--status-sent)]     ring-[var(--status-sent-ring)]',
+  FAILED:   'bg-[var(--status-failed-bg)]   text-[var(--status-failed)]   ring-[var(--status-failed-ring)]',
+  CANCELLED:'bg-[var(--status-cancelled-bg)] text-[var(--status-cancelled)] ring-[var(--status-cancelled-ring)]',
 };
 
 export function StatusBadge({ status }: { status: EmailStatus }) {
@@ -112,10 +131,10 @@ export function StatusBadge({ status }: { status: EmailStatus }) {
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${STATUS_STYLES[status]}`}
     >
       {status === 'SENDING' && (
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+        <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--status-sending)]" />
       )}
       {status === 'SENT' && (
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[var(--status-sent)]" />
       )}
       {status.toLowerCase()}
     </span>
@@ -134,9 +153,9 @@ export function DeliverabilityBadge({
 
   const band = score >= 80 ? 'good' : score >= 50 ? 'warning' : 'poor';
   const styles = {
-    good: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30 shadow-[0_0_8px_rgba(52,211,153,0.2)]',
-    warning: 'bg-amber-500/15 text-amber-300 ring-amber-500/30 shadow-[0_0_8px_rgba(251,191,36,0.2)]',
-    poor: 'bg-red-500/15 text-red-300 ring-red-500/30 shadow-[0_0_8px_rgba(248,113,113,0.2)]',
+    good: 'bg-[var(--status-sent-bg)] text-[var(--status-sent)] ring-[var(--status-sent-ring)]',
+    warning: 'bg-[var(--status-sending-bg)] text-[var(--status-sending)] ring-[var(--status-sending-ring)]',
+    poor: 'bg-[var(--status-failed-bg)] text-[var(--status-failed)] ring-[var(--status-failed-ring)]',
   }[band];
 
   return (
@@ -208,6 +227,10 @@ export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   );
 }
 
+/**
+ * EmptyState v2 — left-aligned with asymmetric whitespace.
+ * Removed the "icon in rounded-square badge" pattern.
+ */
 export function EmptyState({
   title,
   description,
@@ -218,29 +241,13 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="relative px-6 py-16 text-center overflow-hidden">
-      {/* Subtle sweeping clock hand in background */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
-        <div className="w-48 h-48 rounded-full border border-white relative animate-sweep-slow">
-          <div className="absolute top-1/2 left-1/2 w-20 h-0.5 bg-white origin-left" />
-        </div>
-      </div>
-
-      <div className="relative z-10">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl elevation-2 text-violet-400 animate-float">
-          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
-            />
-          </svg>
-        </div>
-        <p className="text-base font-semibold text-slate-200" style={{ fontFamily: 'var(--font-heading)' }}>
+    <div className="px-8 py-14 sm:px-12">
+      <div className="max-w-xs">
+        <p className="text-sm font-semibold text-slate-200" style={{ fontFamily: 'var(--font-heading)' }}>
           {title}
         </p>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-slate-400">{description}</p>
-        {action && <div className="mt-5 flex justify-center">{action}</div>}
+        <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{description}</p>
+        {action && <div className="mt-5">{action}</div>}
       </div>
     </div>
   );
@@ -249,26 +256,18 @@ export function EmptyState({
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const message = error instanceof Error ? error.message : 'Something went wrong.';
   return (
-    <div className="px-6 py-16 text-center" role="alert">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 ring-1 ring-red-500/20 text-red-400">
-        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-          />
-        </svg>
+    <div className="px-8 py-14 sm:px-12" role="alert">
+      <div className="max-w-xs">
+        <p className="text-sm font-semibold text-[var(--status-failed)]">Could not load this view</p>
+        <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{message}</p>
+        {onRetry && (
+          <div className="mt-5">
+            <Button variant="secondary" onClick={onRetry}>
+              Try again
+            </Button>
+          </div>
+        )}
       </div>
-      <p className="text-sm font-semibold text-red-300">Could not load this view</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">{message}</p>
-      {onRetry && (
-        <div className="mt-5 flex justify-center">
-          <Button variant="secondary" onClick={onRetry}>
-            Try again
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -276,7 +275,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 /** Inline banner for form-level errors. */
 export function Alert({ children }: { children: ReactNode }) {
   return (
-    <div role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300 border border-red-500/25 backdrop-blur-md">
+    <div role="alert" className="rounded-xl bg-[var(--status-failed-bg)] px-4 py-3 text-sm text-[var(--status-failed)] border border-[var(--status-failed-ring)] backdrop-blur-md">
       {children}
     </div>
   );
