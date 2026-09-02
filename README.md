@@ -1,17 +1,40 @@
+<div align="center">
+
+<br />
+
 # TimedInk
 
-**A scheduled email sender that keeps its promises.** Write an email, pick a send time in your
-own timezone, and it goes out then — surviving process restarts, a wiped Redis, and a provider
-that throttles you if you send too fast.
+### Scheduled email that keeps its promises
 
-Built as a take-home for [ReachInbox](https://reachinbox.ai/).
+Write it now — send it exactly when you meant to.<br />
+Survives process restarts, a wiped Redis, and a provider that throttles you for sending too fast.
+
+<br />
+
+<p>
+  <img alt="TypeScript, strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="Node 22" src="https://img.shields.io/badge/Node-22-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" />
+  <img alt="Prisma with MySQL 8" src="https://img.shields.io/badge/Prisma-MySQL%208-2D3748?style=flat-square&logo=prisma&logoColor=white" />
+  <img alt="BullMQ on Redis 7" src="https://img.shields.io/badge/BullMQ-Redis%207-DC382D?style=flat-square&logo=redis&logoColor=white" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-087EA4?style=flat-square&logo=react&logoColor=white" />
+  <img alt="56 tests passing" src="https://img.shields.io/badge/tests-56%20passing-E5A13C?style=flat-square" />
+</p>
+
+<br />
+
+**MySQL is the source of truth. Redis is a derived index that can be rebuilt at any moment.**<br />
+<sub>Every design decision below follows from that one sentence.</sub>
+
+<br />
+
+</div>
+
+---
 
 | | |
 | --- | --- |
-| **Backend** | Node 22 · TypeScript (strict) · Express · Prisma / MySQL 8 · BullMQ / Redis 7 |
-| **Frontend** | React 19 · Vite · TanStack Query · Tailwind CSS 4 |
-| **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real preview link |
-| **Tests** | 56 passing, hermetic — no containers needed |
+| **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real, viewable preview link |
+| **Tests** | 56, hermetic — no MySQL, Redis or SMTP needed to run them |
 | **Clone → running** | ~4 minutes, five commands |
 
 ---

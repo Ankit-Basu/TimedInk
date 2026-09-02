@@ -185,7 +185,7 @@ reputation, none of which are meaningful against Ethereal.
 | **Editing a scheduled email** | Only create and cancel. Editing means changing the delay, which means `job.changeDelay()` plus revalidation — cancel-and-recreate covers the need. |
 | **Mailbox CRUD in the UI** | `POST /api/mailboxes` exists and is tested by hand; the UI only lists mailboxes and advances warmup. The seed creates two, which is what the demo needs. |
 | **Bulk actions** | No multi-select cancel. |
-| **Refresh tokens / password reset / email verification** | Out of scope for a take-home; register + login only. |
+| **Refresh tokens / password reset / email verification** | Out of scope here; register + login only. |
 | **Frontend tests** | All 56 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
 | **CI pipeline** | No GitHub Actions workflow. `npm test` and `npm run typecheck` are hermetic and would drop straight into one. |
 | **Dockerfiles for the app itself** | Compose runs MySQL + Redis only; the app runs on the host for fast reloads and readable stack traces. Production would add multi-stage Dockerfiles for API and worker. |
