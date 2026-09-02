@@ -107,7 +107,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="compose-title"
@@ -116,16 +116,24 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 id="compose-title" className="text-base font-semibold text-slate-900">
-            Schedule an email
-          </h2>
+      <div className="w-full max-w-2xl glass-panel shadow-2xl animate-scale-in gradient-border">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-500">
+              <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </div>
+            <h2 id="compose-title" className="text-base font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
+              Schedule an email
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 transition-colors"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -133,7 +141,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6" noValidate>
           {errorMessage && <Alert>{errorMessage}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -180,10 +188,10 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
 
           {/* Bonus A — informational, never blocks the send. */}
           {preview && (
-            <div className="rounded-md bg-slate-50 px-3 py-3 ring-1 ring-slate-200">
-              <div className="flex items-center gap-2">
+            <div className="rounded-xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.08] backdrop-blur-sm">
+              <div className="flex items-center gap-3">
                 <DeliverabilityBadge score={preview.score} flags={preview.details} />
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-slate-300">
                   Deliverability score
                 </span>
                 <span className="text-xs text-slate-500">
@@ -193,7 +201,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
                 </span>
               </div>
               {preview.flags.length > 0 && (
-                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                <ul className="mt-2 space-y-1 text-xs text-slate-500">
                   {preview.flags.map((flag) => (
                     <li key={flag}>• {flag}</li>
                   ))}
@@ -231,11 +239,14 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
             </Field>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] pt-5">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" loading={mutation.isPending}>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
               Schedule email
             </Button>
           </div>
