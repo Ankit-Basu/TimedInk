@@ -1,9 +1,9 @@
 {
-  "name": "outbox-pilot-backend",
+  "name": "timedink-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Outbox Pilot API + scheduling worker",
+  "description": "TimedInk API + scheduling worker",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "worker": "tsx watch src/worker.ts",

@@ -20,7 +20,7 @@ export type ProcessOutcome =
   | { result: 'throttled'; retryInMs: number };
 
 function fromAddress(mailbox: Mailbox | null): string {
-  if (!mailbox) return 'Outbox Pilot <no-reply@outbox-pilot.local>';
+  if (!mailbox) return 'TimedInk <no-reply@timedink.local>';
   return `${mailbox.fromName} <${mailbox.fromEmail}>`;
 }
 

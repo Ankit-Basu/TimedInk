@@ -18,7 +18,7 @@ import type {
  */
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
-const TOKEN_STORAGE_KEY = 'outbox-pilot.token';
+const TOKEN_STORAGE_KEY = 'timedink.token';
 
 export const tokenStore = {
   get: (): string | null => {

@@ -22,7 +22,7 @@ import { runBootReconciliation } from './services/reconciliation.js';
 async function main(): Promise<void> {
   logger.info(
     { env: env.NODE_ENV, port: env.PORT, queue: env.EMAIL_QUEUE_NAME },
-    'starting Outbox Pilot API',
+    'starting TimedInk API',
   );
 
   await prisma.$queryRaw`SELECT 1`;
