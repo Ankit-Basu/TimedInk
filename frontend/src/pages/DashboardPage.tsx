@@ -6,6 +6,7 @@ import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import EmailTable from '../features/emails/EmailTable';
 import ComposeModal from '../features/emails/ComposeModal';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
+import MoltenMetal from '../components/MoltenMetal';
 import type { EmailStatus } from '../lib/types';
 
 /**
@@ -25,6 +26,7 @@ interface Tab {
   id: string;
   label: string;
   statuses: EmailStatus[];
+  icon: string;
   empty: { title: string; description: string };
 }
 
@@ -32,6 +34,7 @@ const TABS: Tab[] = [
   {
     id: 'scheduled',
     label: 'Scheduled',
+    icon: '⏳',
     statuses: ['PENDING', 'QUEUED', 'SENDING'],
     empty: {
       title: 'Nothing scheduled',
@@ -41,6 +44,7 @@ const TABS: Tab[] = [
   {
     id: 'sent',
     label: 'Sent',
+    icon: '✓',
     statuses: ['SENT'],
     empty: {
       title: 'Nothing sent yet',
@@ -51,6 +55,7 @@ const TABS: Tab[] = [
   {
     id: 'failed',
     label: 'Failed',
+    icon: '✕',
     statuses: ['FAILED'],
     empty: {
       title: 'No failures',
@@ -61,6 +66,7 @@ const TABS: Tab[] = [
   {
     id: 'cancelled',
     label: 'Cancelled',
+    icon: '⊘',
     statuses: ['CANCELLED'],
     empty: {
       title: 'Nothing cancelled',
@@ -68,6 +74,23 @@ const TABS: Tab[] = [
     },
   },
 ];
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  const colorStyles: Record<string, string> = {
+    purple: 'from-violet-500/20 to-violet-600/5 ring-violet-500/20 text-violet-300',
+    emerald: 'from-emerald-500/20 to-emerald-600/5 ring-emerald-500/20 text-emerald-300',
+    red: 'from-red-500/20 to-red-600/5 ring-red-500/20 text-red-300',
+    amber: 'from-amber-500/20 to-amber-600/5 ring-amber-500/20 text-amber-300',
+  };
+  return (
+    <div className={`rounded-xl bg-gradient-to-br ${colorStyles[color]} p-4 ring-1 backdrop-blur-sm`}>
+      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className="mt-1 text-2xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+        {value}
+      </p>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -98,15 +121,41 @@ export default function DashboardPage() {
   const pagination = emailsQuery.data?.pagination;
 
   return (
-    <div className="min-h-full">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="relative min-h-full">
+      {/* MoltenMetal background — dimmed for readability */}
+      <div className="fixed inset-0 z-0">
+        <MoltenMetal
+          color1="#5227FF"
+          color2="#FF9FFC"
+          color3="#FFFFFF"
+          speed={0.2}
+          scale={5}
+          detail={2}
+          glow={1.2}
+          coreSize={0.08}
+          swirl={0.8}
+          fold={-0.15}
+          blackPoint={0.1}
+          brightness={0.8}
+          colorMode="molten"
+          grain
+          grainIntensity={0.03}
+          mouseInteraction={false}
+          opacity={0.25}
+        />
+      </div>
+
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-black/40 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-              OP
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Outbox Pilot</p>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>TimedInk</p>
               <p className="text-xs text-slate-500">
                 {statsQuery.data ? `${statsQuery.data.total} emails` : '—'}
               </p>
@@ -114,8 +163,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-600 sm:inline">{user?.email}</span>
-            <Button onClick={() => setComposeOpen(true)}>New email</Button>
+            <span className="hidden text-sm text-slate-400 sm:inline">{user?.email}</span>
+            <Button onClick={() => setComposeOpen(true)}>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              New email
+            </Button>
             <Button variant="ghost" onClick={logout}>
               Sign out
             </Button>
@@ -123,11 +177,21 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      {/* Main content */}
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        {/* Stat cards */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 animate-fade-in">
+          <StatCard label="Scheduled" value={countFor(TABS[0]!)} color="purple" />
+          <StatCard label="Sent" value={countFor(TABS[1]!)} color="emerald" />
+          <StatCard label="Failed" value={countFor(TABS[2]!)} color="red" />
+          <StatCard label="Cancelled" value={countFor(TABS[3]!)} color="amber" />
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <section className="min-w-0">
-            <div className="rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
-              <nav className="flex gap-1 border-b border-slate-200 px-3 pt-3" aria-label="Email status">
+          <section className="min-w-0 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <div className="glass-panel overflow-hidden">
+              {/* Tab nav */}
+              <nav className="flex gap-1 border-b border-white/[0.06] px-4 pt-3" aria-label="Email status">
                 {TABS.map((tab) => {
                   const active = tab.id === activeTab.id;
                   return (
@@ -139,16 +203,19 @@ export default function DashboardPage() {
                         setActiveTabId(tab.id);
                         setPage(1);
                       }}
-                      className={`rounded-t-md px-3 py-2 text-sm font-medium transition ${
+                      className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                         active
-                          ? 'bg-indigo-50 text-indigo-700'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-white/[0.08] text-white border-b-2 border-violet-500'
+                          : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-300'
                       }`}
                     >
+                      <span className="mr-1.5">{tab.icon}</span>
                       {tab.label}
                       <span
-                        className={`ml-2 rounded-full px-1.5 py-0.5 text-[11px] ${
-                          active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
+                        className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          active
+                            ? 'bg-violet-500/20 text-violet-300'
+                            : 'bg-white/[0.06] text-slate-500'
                         }`}
                       >
                         {countFor(tab)}
@@ -177,14 +244,14 @@ export default function DashboardPage() {
                   <EmailTable emails={emailsQuery.data.data} />
 
                   {pagination && pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3 text-sm">
+                    <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-3 text-sm">
                       <span className="text-slate-500">
                         Page {pagination.page} of {pagination.totalPages} · {pagination.total} total
                       </span>
                       <div className="flex gap-2">
                         <Button
                           variant="secondary"
-                          className="px-2 py-1 text-xs"
+                          className="px-3 py-1.5 text-xs"
                           disabled={pagination.page <= 1}
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
                         >
@@ -192,7 +259,7 @@ export default function DashboardPage() {
                         </Button>
                         <Button
                           variant="secondary"
-                          className="px-2 py-1 text-xs"
+                          className="px-3 py-1.5 text-xs"
                           disabled={pagination.page >= pagination.totalPages}
                           onClick={() => setPage((p) => p + 1)}
                         >
@@ -205,12 +272,14 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-slate-600">
               Auto-refreshing every {Math.round(POLL_INTERVAL_MS / 1000)}s.
             </p>
           </section>
 
-          <MailboxPanel pollIntervalMs={POLL_INTERVAL_MS} />
+          <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <MailboxPanel pollIntervalMs={POLL_INTERVAL_MS} />
+          </div>
         </div>
       </main>
 
