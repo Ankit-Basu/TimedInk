@@ -28,7 +28,7 @@ function parseArgs(argv: string[]): Args {
   return {
     count: Number.parseInt(get('count', '40'), 10),
     baseUrl: get('url', process.env.API_BASE_URL ?? 'http://localhost:4000').replace(/\/$/, ''),
-    email: get('email', process.env.SEED_USER_EMAIL ?? 'demo@outboxpilot.dev'),
+    email: get('email', process.env.SEED_USER_EMAIL ?? 'demo@timedink.dev'),
     password: get('password', process.env.SEED_USER_PASSWORD ?? 'demo1234'),
     // 0 = everything at the same instant (the sharpest rate-limit demo).
     spreadSeconds: Number.parseInt(get('spread', '0'), 10),
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
           body:
             `Hi there,\n\nThis is burst message ${i} of ${args.count}, scheduled to go out ` +
             `immediately so the queue rate limiter is visible in the worker logs.\n\n` +
-            `— Outbox Pilot`,
+            `— TimedInk`,
           scheduledAt: new Date(Date.now() + offsetMs).toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },

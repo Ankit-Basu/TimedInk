@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const DEMO_EMAIL = process.env.SEED_USER_EMAIL ?? 'demo@outboxpilot.dev';
+const DEMO_EMAIL = process.env.SEED_USER_EMAIL ?? 'demo@timedink.dev';
 const DEMO_PASSWORD = process.env.SEED_USER_PASSWORD ?? 'demo1234';
 const DEMO_NAME = process.env.SEED_USER_NAME ?? 'Demo Operator';
 
@@ -29,8 +29,8 @@ interface MailboxSeed {
  * warmup days so the ramp (bonus B) is visible without waiting.
  */
 const MAILBOXES: MailboxSeed[] = [
-  { fromName: 'Ava from Outbox', fromEmail: 'ava@outboxpilot.dev', warmupDay: 3, dailyLimit: 100 },
-  { fromName: 'Ben from Outbox', fromEmail: 'ben@outboxpilot.dev', warmupDay: 1, dailyLimit: 100 },
+  { fromName: 'Ava from TimedInk', fromEmail: 'ava@timedink.dev', warmupDay: 3, dailyLimit: 100 },
+  { fromName: 'Ben from TimedInk', fromEmail: 'ben@timedink.dev', warmupDay: 1, dailyLimit: 100 },
 ];
 
 async function main(): Promise<void> {
@@ -42,15 +42,21 @@ async function main(): Promise<void> {
     create: { email: DEMO_EMAIL, name: DEMO_NAME, passwordHash },
   });
 
-  for (const mailbox of MAILBOXES) {
-    // No unique constraint on (userId, fromEmail) in the schema — a user may
-    // legitimately have two identities on one address — so match manually.
-    const existing = await prisma.mailbox.findFirst({
-      where: { userId: user.id, fromEmail: mailbox.fromEmail },
-    });
+  // There is no unique constraint on (userId, fromEmail) — a user may
+  // legitimately hold two identities on one address — so the seed matches by
+  // ORDINAL POSITION rather than by address. Matching on fromEmail would make
+  // a change to any seeded address create a duplicate mailbox instead of
+  // updating the existing one, orphaning whatever history was attached to it.
+  const existing = await prisma.mailbox.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
 
-    if (existing) {
-      await prisma.mailbox.update({ where: { id: existing.id }, data: mailbox });
+  for (const [index, mailbox] of MAILBOXES.entries()) {
+    const slot = existing[index];
+    if (slot) {
+      await prisma.mailbox.update({ where: { id: slot.id }, data: mailbox });
     } else {
       await prisma.mailbox.create({ data: { ...mailbox, userId: user.id } });
     }
