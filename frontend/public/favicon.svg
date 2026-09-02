@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="ti-grad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#D946EF"/>
+    </linearGradient>
+  </defs>
+  <!-- Clock Rim -->
+  <circle cx="16" cy="16" r="13.5" stroke="url(#ti-grad)" stroke-width="2.5"/>
+  <!-- Clock hands at 10:10 merging into an envelope flap & ink nib -->
+  <path d="M10 11.5L16 16.5L22 11.5M10 11.5L16 22L22 11.5" stroke="url(#ti-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Center ink focal point -->
+  <circle cx="16" cy="16.5" r="1.5" fill="#D946EF"/>
+</svg>

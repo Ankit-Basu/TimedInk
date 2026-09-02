@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui';
@@ -7,19 +8,10 @@ import EmailTable from '../features/emails/EmailTable';
 import ComposeModal from '../features/emails/ComposeModal';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
 import MoltenMetal from '../components/MoltenMetal';
+import TimedInkLogo from '../components/TimedInkLogo';
 import type { EmailStatus } from '../lib/types';
 
-/**
- * Poll interval for the dashboard.
- *
- * NOTE: polling is the right call at this size — one user, a handful of rows,
- * and it survives an API restart with no reconnect logic. In a larger system
- * this would be a WebSocket or SSE subscription pushing status transitions
- * (the worker already emits an EmailEvent per transition, which is exactly the
- * stream you would publish), so the client would not re-query on a timer.
- */
 const POLL_INTERVAL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 4000);
-
 const PAGE_SIZE = 20;
 
 interface Tab {
@@ -48,8 +40,7 @@ const TABS: Tab[] = [
     statuses: ['SENT'],
     empty: {
       title: 'Nothing sent yet',
-      description:
-        'Once an email goes out it lands here with a link to its Ethereal preview.',
+      description: 'Once an email goes out it lands here with a live preview link.',
     },
   },
   {
@@ -59,8 +50,7 @@ const TABS: Tab[] = [
     statuses: ['FAILED'],
     empty: {
       title: 'No failures',
-      description:
-        'Emails land here after BullMQ exhausts its retries, or when a missed send window is flagged for review.',
+      description: 'Emails land here after BullMQ exhausts its retries, or when a missed window is flagged.',
     },
   },
   {
@@ -75,20 +65,78 @@ const TABS: Tab[] = [
   },
 ];
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  const colorStyles: Record<string, string> = {
-    purple: 'from-violet-500/20 to-violet-600/5 ring-violet-500/20 text-violet-300',
-    emerald: 'from-emerald-500/20 to-emerald-600/5 ring-emerald-500/20 text-emerald-300',
-    red: 'from-red-500/20 to-red-600/5 ring-red-500/20 text-red-300',
-    amber: 'from-amber-500/20 to-amber-600/5 ring-amber-500/20 text-amber-300',
-  };
+/** Smooth number counting up on mount/refresh */
+function AnimatedNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+  const prevRef = useRef(value);
+
+  useEffect(() => {
+    const start = prevRef.current;
+    const end = value;
+    prevRef.current = value;
+    if (start === end) return;
+
+    const startTime = performance.now();
+    const duration = 650;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + (end - start) * ease));
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+
+  return <span>{display}</span>;
+}
+
+interface StatCardProps {
+  label: string;
+  value: number;
+  variant: 'purple' | 'emerald' | 'red' | 'amber';
+  trend: string;
+  delay?: number;
+}
+
+function StatCard({ label, value, variant, trend, delay = 0 }: StatCardProps) {
+  const variantClass = {
+    purple: 'ambient-purple text-violet-300',
+    emerald: 'ambient-emerald text-emerald-300',
+    red: 'ambient-red text-red-300',
+    amber: 'ambient-amber text-amber-300',
+  }[variant];
+
+  const trendColors = {
+    purple: 'text-violet-400/80',
+    emerald: 'text-emerald-400/80',
+    red: 'text-red-400/80',
+    amber: 'text-amber-400/80',
+  }[variant];
+
   return (
-    <div className={`rounded-xl bg-gradient-to-br ${colorStyles[color]} p-4 ring-1 backdrop-blur-sm`}>
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
-      <p className="mt-1 text-2xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
-        {value}
-      </p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
+      className={`ambient-card ${variantClass} p-4`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+        <span className={`text-[10px] font-medium ${trendColors} flex items-center gap-1`}>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-current opacity-75" />
+          {trend}
+        </span>
+      </div>
+      <div className="mt-2 flex items-baseline justify-between">
+        <p className="text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: 'var(--font-heading)' }}>
+          <AnimatedNumber value={value} />
+        </p>
+      </div>
+    </motion.div>
   );
 }
 
@@ -98,14 +146,15 @@ export default function DashboardPage() {
   const [page, setPage] = useState(1);
   const [composeOpen, setComposeOpen] = useState(false);
 
+  // Live countdown to next poll
+  const [secondsUntilPoll, setSecondsUntilPoll] = useState(Math.round(POLL_INTERVAL_MS / 1000));
+
   const activeTab = TABS.find((t) => t.id === activeTabId) ?? TABS[0]!;
 
   const emailsQuery = useQuery({
     queryKey: ['emails', activeTab.id, page],
     queryFn: () => api.listEmails({ status: activeTab.statuses, page, pageSize: PAGE_SIZE }),
     refetchInterval: POLL_INTERVAL_MS,
-    // Keep the previous page on screen while the next one loads, so the table
-    // does not flash empty on every poll.
     placeholderData: keepPreviousData,
   });
 
@@ -115,85 +164,121 @@ export default function DashboardPage() {
     refetchInterval: POLL_INTERVAL_MS,
   });
 
+  // Countdown timer effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsUntilPoll((prev) => (prev <= 1 ? Math.round(POLL_INTERVAL_MS / 1000) : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Reset timer on query refetch
+  useEffect(() => {
+    if (emailsQuery.isFetching) {
+      setSecondsUntilPoll(Math.round(POLL_INTERVAL_MS / 1000));
+    }
+  }, [emailsQuery.isFetching]);
+
   const countFor = (tab: Tab): number =>
     statsQuery.data ? tab.statuses.reduce((sum, s) => sum + (statsQuery.data.counts[s] ?? 0), 0) : 0;
+
+  const scheduledCount = countFor(TABS[0]!);
+  const sentCount = countFor(TABS[1]!);
+  const failedCount = countFor(TABS[2]!);
+  const cancelledCount = countFor(TABS[3]!);
 
   const pagination = emailsQuery.data?.pagination;
 
   return (
-    <div className="relative min-h-full">
-      {/* MoltenMetal background — dimmed for readability */}
-      <div className="fixed inset-0 z-0">
+    <div className="relative min-h-full selection:bg-violet-500/30">
+      {/* MoltenMetal WebGL Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <MoltenMetal
           color1="#5227FF"
           color2="#FF9FFC"
           color3="#FFFFFF"
-          speed={0.2}
-          scale={5}
+          speed={0.18}
+          scale={4.5}
           detail={2}
-          glow={1.2}
+          glow={1.1}
           coreSize={0.08}
-          swirl={0.8}
-          fold={-0.15}
-          blackPoint={0.1}
-          brightness={0.8}
+          swirl={0.7}
+          fold={-0.12}
+          blackPoint={0.12}
+          brightness={0.75}
           colorMode="molten"
           grain
           grainIntensity={0.03}
           mouseInteraction={false}
-          opacity={0.25}
+          opacity={0.22}
         />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-black/40 backdrop-blur-xl">
+      {/* Sticky Header with Hairline Gradient Edge */}
+      <header className="sticky top-0 z-30 hairline-gradient-bottom bg-black/40 backdrop-blur-xl transition-all">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
-              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>TimedInk</p>
-              <p className="text-xs text-slate-500">
-                {statsQuery.data ? `${statsQuery.data.total} emails` : '—'}
-              </p>
-            </div>
-          </div>
+          <TimedInkLogo size={32} showWordmark={true} />
 
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-400 sm:inline">{user?.email}</span>
+            <span className="hidden text-xs text-slate-400 sm:inline px-3 py-1 rounded-full elevation-1">
+              {user?.email}
+            </span>
             <Button onClick={() => setComposeOpen(true)}>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               New email
             </Button>
-            <Button variant="ghost" onClick={logout}>
+            <Button variant="ghost" onClick={logout} className="text-xs">
               Sign out
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main Content */}
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {/* Stat cards */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 animate-fade-in">
-          <StatCard label="Scheduled" value={countFor(TABS[0]!)} color="purple" />
-          <StatCard label="Sent" value={countFor(TABS[1]!)} color="emerald" />
-          <StatCard label="Failed" value={countFor(TABS[2]!)} color="red" />
-          <StatCard label="Cancelled" value={countFor(TABS[3]!)} color="amber" />
+        {/* Stat cards in tight ambient grid */}
+        <div className="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+          <StatCard
+            label="Scheduled"
+            value={scheduledCount}
+            variant="purple"
+            trend={scheduledCount > 0 ? `${scheduledCount} in queue` : 'queue clear'}
+            delay={0}
+          />
+          <StatCard
+            label="Sent"
+            value={sentCount}
+            variant="emerald"
+            trend={`${sentCount} delivered`}
+            delay={0.04}
+          />
+          <StatCard
+            label="Failed"
+            value={failedCount}
+            variant="red"
+            trend={failedCount === 0 ? 'zero errors' : `${failedCount} flagged`}
+            delay={0.08}
+          />
+          <StatCard
+            label="Cancelled"
+            value={cancelledCount}
+            variant="amber"
+            trend={`${cancelledCount} retracted`}
+            delay={0.12}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <section className="min-w-0 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <div className="glass-panel overflow-hidden">
-              {/* Tab nav */}
-              <nav className="flex gap-1 border-b border-white/[0.06] px-4 pt-3" aria-label="Email status">
+          {/* Main Table Column */}
+          <section className="min-w-0">
+            <div className="elevation-2 overflow-hidden">
+              {/* Tab Navigation with Framer Motion Sliding Pill */}
+              <nav className="flex items-center gap-1 border-b border-white/[0.06] p-2" aria-label="Email status">
                 {TABS.map((tab) => {
                   const active = tab.id === activeTab.id;
+                  const count = countFor(tab);
                   return (
                     <button
                       key={tab.id}
@@ -203,22 +288,28 @@ export default function DashboardPage() {
                         setActiveTabId(tab.id);
                         setPage(1);
                       }}
-                      className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                        active
-                          ? 'bg-white/[0.08] text-white border-b-2 border-violet-500'
-                          : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-300'
+                      className={`relative px-4 py-2 text-sm font-medium rounded-xl transition-colors duration-150 flex items-center gap-2 ${
+                        active ? 'text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <span className="mr-1.5">{tab.icon}</span>
-                      {tab.label}
+                      {/* Sliding active pill indicator */}
+                      {active && (
+                        <motion.div
+                          layoutId="active-tab-pill"
+                          className="absolute inset-0 rounded-xl bg-white/[0.09] border border-white/15 shadow-[0_0_16px_rgba(139,92,246,0.2)]"
+                          transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                        />
+                      )}
+                      <span className="relative z-10 text-xs">{tab.icon}</span>
+                      <span className="relative z-10">{tab.label}</span>
                       <span
-                        className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        className={`relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all ${
                           active
-                            ? 'bg-violet-500/20 text-violet-300'
+                            ? 'bg-violet-500/25 text-violet-200 ring-1 ring-violet-500/40'
                             : 'bg-white/[0.06] text-slate-500'
                         }`}
                       >
-                        {countFor(tab)}
+                        {count}
                       </span>
                     </button>
                   );
@@ -241,17 +332,27 @@ export default function DashboardPage() {
                 />
               ) : (
                 <>
-                  <EmailTable emails={emailsQuery.data.data} />
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab.id + page}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <EmailTable emails={emailsQuery.data.data} />
+                    </motion.div>
+                  </AnimatePresence>
 
                   {pagination && pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-3 text-sm">
-                      <span className="text-slate-500">
+                    <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-3 text-xs">
+                      <span className="text-slate-400">
                         Page {pagination.page} of {pagination.totalPages} · {pagination.total} total
                       </span>
                       <div className="flex gap-2">
                         <Button
                           variant="secondary"
-                          className="px-3 py-1.5 text-xs"
+                          className="px-3 py-1 text-xs"
                           disabled={pagination.page <= 1}
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
                         >
@@ -259,7 +360,7 @@ export default function DashboardPage() {
                         </Button>
                         <Button
                           variant="secondary"
-                          className="px-3 py-1.5 text-xs"
+                          className="px-3 py-1 text-xs"
                           disabled={pagination.page >= pagination.totalPages}
                           onClick={() => setPage((p) => p + 1)}
                         >
@@ -272,12 +373,20 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <p className="mt-3 text-xs text-slate-600">
-              Auto-refreshing every {Math.round(POLL_INTERVAL_MS / 1000)}s.
-            </p>
+            {/* Live Auto-Refresh Indicator with pulsing dot & countdown */}
+            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 select-none">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span>
+                Live sync in <span className="font-mono text-slate-400 font-semibold">{secondsUntilPoll}s</span>
+              </span>
+            </div>
           </section>
 
-          <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          {/* Mailbox Sidebar Panel */}
+          <div>
             <MailboxPanel pollIntervalMs={POLL_INTERVAL_MS} />
           </div>
         </div>

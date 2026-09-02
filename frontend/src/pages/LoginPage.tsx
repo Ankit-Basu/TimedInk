@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
 import MoltenMetal from '../components/MoltenMetal';
+import TimedInkLogo from '../components/TimedInkLogo';
 
 /** Matches prisma/seed.ts so a reviewer never has to guess. */
 const DEMO = { email: 'demo@outboxpilot.dev', password: 'demo1234' };
@@ -28,7 +29,6 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // Send the user back where they were headed before the redirect.
       const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
@@ -44,7 +44,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell title="Sign in to TimedInk" subtitle="Every email, perfectly timed — down to the second.">
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {error && <Alert>{error}</Alert>}
 
         <Field label="Email" required>
@@ -69,21 +69,20 @@ export default function LoginPage() {
           />
         </Field>
 
-        <Button type="submit" loading={submitting} className="w-full">
+        <Button type="submit" loading={submitting} className="w-full mt-2">
           Sign in
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-5 text-center text-xs text-slate-400">
         No account?{' '}
-        <Link to="/register" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">
+        <Link to="/register" className="font-semibold text-violet-400 hover:text-violet-300 transition-colors">
           Create one
         </Link>
       </p>
 
-      <div className="mt-4 rounded-xl bg-white/[0.04] px-4 py-3 text-center text-xs text-slate-500 ring-1 ring-white/[0.08]">
-        Seeded demo account is pre-filled — run <code className="font-mono text-violet-400">npm run seed</code> in
-        the backend first.
+      <div className="mt-4 rounded-xl bg-white/[0.04] px-4 py-2.5 text-center text-xs text-slate-400 border border-white/[0.08]">
+        Seeded account pre-filled for demo review.
       </div>
     </AuthShell>
   );
@@ -99,9 +98,9 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-full items-center justify-center px-4 py-12 overflow-hidden">
+    <div className="relative flex min-h-full items-center justify-center px-4 py-12 overflow-hidden selection:bg-violet-500/30">
       {/* MoltenMetal background */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <MoltenMetal
           color1="#5227FF"
           color2="#FF9FFC"
@@ -126,27 +125,26 @@ export function AuthShell({
 
       {/* Glass card */}
       <div className="relative z-10 w-full max-w-sm animate-scale-in">
-        <div className="mb-8 text-center">
-          {/* Logo */}
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-[0_0_30px_rgba(139,92,246,0.4)]">
-            <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <div className="mb-6 text-center">
+          {/* Logo Mark */}
+          <div className="mx-auto mb-3 flex items-center justify-center">
+            <TimedInkLogo size={46} showWordmark={false} />
           </div>
-          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
             {title}
           </h1>
-          <p className="mt-2 text-sm text-slate-400">{subtitle}</p>
+          <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">{subtitle}</p>
         </div>
 
-        <div className="glass-panel p-6 glow-purple gradient-border">{children}</div>
+        <div className="elevation-3 p-6 rounded-2xl border border-white/[0.14]">{children}</div>
 
-        {/* Product links */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-slate-600">
-          <span>An Outbox Labs product</span>
-          <span className="text-slate-700">·</span>
+        {/* Outbox Labs Product Links */}
+        <div className="mt-6 flex items-center justify-center gap-3 text-[11px] text-slate-500">
+          <span>Outbox Labs:</span>
           <a href="https://reachinbox.ai/" target="_blank" rel="noreferrer" className="hover:text-violet-400 transition-colors">ReachInbox</a>
+          <span className="text-slate-700">·</span>
           <a href="https://zapmail.ai/" target="_blank" rel="noreferrer" className="hover:text-violet-400 transition-colors">Zapmail</a>
+          <span className="text-slate-700">·</span>
           <a href="https://mailverify.ai/" target="_blank" rel="noreferrer" className="hover:text-violet-400 transition-colors">Mailverify</a>
         </div>
       </div>
