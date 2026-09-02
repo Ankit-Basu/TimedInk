@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
 import Logo from '../components/Logo';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
 /** Matches prisma/seed.ts so a reviewer never has to guess. */
 const DEMO = { email: 'demo@timedink.dev', password: 'demo1234' };
@@ -18,6 +19,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState(DEMO.password);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useDocumentTitle('Sign in');
 
   if (user) return <Navigate to="/dashboard" replace />;
 
@@ -130,12 +133,12 @@ export function AuthShell({
         </div>
 
         {/* Form column */}
-        <div className="flex items-center justify-center p-8 sm:p-12">
+        <main className="flex items-center justify-center p-8 sm:p-12">
           <div className="w-full max-w-sm">
             <p className="label mb-8">{eyebrow}</p>
             {children}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

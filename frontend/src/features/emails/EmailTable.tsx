@@ -9,7 +9,13 @@ const CANCELLABLE = new Set<ScheduledEmail['status']>(['PENDING', 'QUEUED']);
 
 const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
+export default function EmailTable({
+  emails,
+  onSelect,
+}: {
+  emails: ScheduledEmail[];
+  onSelect: (id: string) => void;
+}) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -65,9 +71,20 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
           {emails.map((email) => (
             <tr key={email.id} className="align-top transition-colors hover:bg-surface-2/70">
               <td className="overflow-hidden px-6 py-4 sm:px-8">
-                <div className="truncate text-[13px] text-ink" title={email.to}>
+                {/*
+                  The recipient doubles as the row's affordance. A clickable
+                  <tr> is not reachable by keyboard and has no accessible role,
+                  so the trigger is a real button in the first cell.
+                */}
+                <button
+                  type="button"
+                  onClick={() => onSelect(email.id)}
+                  title={email.to}
+                  className="block w-full truncate text-left text-[13px] text-ink underline decoration-transparent
+                    underline-offset-4 transition-colors hover:decoration-field"
+                >
                   {email.to}
-                </div>
+                </button>
                 {email.cc && (
                   <div className="truncate text-xs text-ink-3" title={email.cc}>
                     cc {email.cc}

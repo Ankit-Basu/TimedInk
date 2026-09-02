@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError, api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
 import { browserTimezone, datetimeLocalValue, localInputToUtcIso } from '../../lib/format';
+import { useFocusTrap } from '../../lib/useFocusTrap';
 import { Alert, Button, Field, Input, Textarea } from '../../components/ui';
 import type { DeliverabilityPreview } from '../../lib/types';
 
@@ -19,6 +20,8 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
   const { showToast } = useToast();
   const timezone = useMemo(() => browserTimezone(), []);
   const firstFieldRef = useRef<HTMLInputElement>(null);
+  // Holds Tab inside the dialog and restores focus to the trigger on close.
+  const dialogRef = useFocusTrap<HTMLDivElement>(open);
 
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
@@ -46,11 +49,20 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
 
   useEffect(() => {
     if (!open) return;
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+
+    // Stop the page behind the dialog scrolling under it.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
   /**
@@ -131,7 +143,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto w-full max-w-2xl border border-rule-strong bg-surface">
+      <div ref={dialogRef} className="mx-auto w-full max-w-2xl border border-rule-strong bg-surface">
         <div className="flex items-center justify-between border-b border-rule px-6 py-4">
           <h2 id="compose-title" className="display text-xl">
             Schedule an email

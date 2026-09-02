@@ -20,14 +20,20 @@
   --color-surface-2: #f7f4ec;
   --color-surface-3: #efeade;
 
-  /* Rules. Hairlines, not borders. */
+  /*
+    Rules. `rule` and `rule-strong` are decorative dividers, so they sit below
+    the 3:1 bar on purpose — WCAG 1.4.11 exempts purely decorative separators.
+    `field` is the resting boundary of a form control, which is NOT exempt, so
+    it is measured at 3.25:1 against the surface.
+  */
   --color-rule: #e2dccf;
   --color-rule-strong: #cdc5b4;
+  --color-field: #948c7b;
 
-  /* Ink. */
+  /* Ink. ink-3 is measured at 4.84:1 on surface, 4.52:1 on surface-2 (AA). */
   --color-ink: #1c1a15;
   --color-ink-2: #5a544a;
-  --color-ink-3: #8c8579;
+  --color-ink-3: #766f63;
 
   /* One accent, used for primary actions and the active marker. */
   --color-accent: #e5a13c;
@@ -40,7 +46,7 @@
   --color-st-sending: #96681a;
   --color-st-sent: #3f6b4c;
   --color-st-failed: #a8443a;
-  --color-st-cancelled: #948d81;
+  --color-st-cancelled: #766f63;
 
   --color-danger: #a8443a;
 

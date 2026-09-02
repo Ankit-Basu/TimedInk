@@ -16,9 +16,9 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANTS: Record<ButtonVariant, string> = {
   // Dark text on amber, as the accent is too light to carry white legibly.
   primary: 'bg-accent text-ink border border-accent hover:bg-accent-hover hover:border-accent-hover',
-  secondary: 'bg-surface text-ink border border-rule-strong hover:bg-surface-2',
+  secondary: 'bg-surface text-ink border border-field hover:bg-surface-2',
   ghost: 'bg-transparent text-ink-2 border border-transparent hover:text-ink hover:bg-surface-2',
-  danger: 'bg-transparent text-danger border border-rule-strong hover:border-danger/60 hover:bg-surface-2',
+  danger: 'bg-transparent text-danger border border-field hover:border-danger hover:bg-surface-2',
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -90,8 +90,8 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
   ruled paper.
 */
 const CONTROL =
-  'block w-full border-0 border-b border-rule-strong bg-transparent px-0 py-2 text-sm text-ink ' +
-  'placeholder:text-ink-3/70 transition-colors hover:border-ink-3 ' +
+  'block w-full border-0 border-b border-field bg-transparent px-0 py-2 text-sm text-ink ' +
+  'placeholder:text-ink-3 transition-colors hover:border-ink-2 ' +
   'focus:border-ink focus:outline-none focus-visible:outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed';
 

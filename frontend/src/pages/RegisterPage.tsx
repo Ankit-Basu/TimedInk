@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
 import { AuthShell } from './LoginPage';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
 export default function RegisterPage() {
   const { user, register } = useAuth();
@@ -15,6 +16,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useDocumentTitle('Create account');
 
   if (user) return <Navigate to="/dashboard" replace />;
 
