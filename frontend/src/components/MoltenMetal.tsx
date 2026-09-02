@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-// @ts-expect-error — ogl ships without TS declarations
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
 import './MoltenMetal.css';
 
