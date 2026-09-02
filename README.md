@@ -1,12 +1,15 @@
-# Outbox Pilot
+<div align="center">
 
-A scheduled email sender: compose an email, pick a send time in your own timezone, and have it
-go out reliably — surviving process restarts, a wiped Redis, and a provider that will throttle
-you if you send too fast.
+# ⏱ TimedInk
 
-Built as a 48-hour take-home. Node + TypeScript + Express + Prisma/MySQL + BullMQ/Redis on the
-back, React + Vite + TanStack Query on the front, Nodemailer against [Ethereal
-Email](https://ethereal.email) so every "sent" message has a real, viewable preview.
+### *Every email, perfectly timed — down to the second.*
+
+**A premium scheduled email platform with resilient delivery, rate limiting, and a stunning glassmorphic UI.**
+
+Built as a take-home assignment for **[Outbox Labs](https://reachinbox.ai/)** — the team behind
+[ReachInbox.ai](https://reachinbox.ai/) · [Zapmail.ai](https://zapmail.ai/) · [Mailverify.ai](https://mailverify.ai/)
+
+</div>
 
 ---
 
@@ -158,6 +161,14 @@ The Vite dev server proxies `/api` to `http://localhost:4000`, so the browser st
 origin and there is no CORS preflight on every dashboard poll. Set `VITE_API_BASE_URL` if you
 would rather the browser hit the API directly. See `frontend/.env.example`.
 
+**UI stack:** React 19 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query. The interface
+features a **premium glassmorphic dark theme** with:
+- **MoltenMetal WebGL shader backgrounds** (via `ogl`) — interactive, mouse-responsive
+- **Frosted glass panels** with `backdrop-blur` and translucent borders
+- **Gradient accents** (violet → fuchsia) with glow hover effects
+- **Premium typography** using Inter (body) and Outfit (headings) from Google Fonts
+- **Smooth micro-animations** for entrance, hover, and state transitions
+
 ---
 
 ## Ethereal Email setup
@@ -187,6 +198,25 @@ sign into. The links themselves keep working — but you cannot browse the old i
 on every row. It is `nodemailer.getTestMessageUrl()`, captured at send time and stored on
 `ScheduledEmail.previewUrl`, so it is also in the API response and in the worker log line for
 that send.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `mysql://...@localhost:3307/outbox_pilot` | Prisma connection string |
+| `REDIS_URL` | `redis://localhost:6379` | BullMQ + warmup counters |
+| `JWT_SECRET` | (set in `.env.example`) | Must be ≥ 16 chars |
+| `ETHEREAL_USER` | *(auto-provisioned)* | Pin to keep one inbox |
+| `ETHEREAL_PASS` | *(auto-provisioned)* | Pin to keep one inbox |
+| `PORT` | `4000` | API listen port |
+| `WORKER_CONCURRENCY` | `5` | Per-process job concurrency |
+| `RATE_LIMIT_MAX` | `10` | Max jobs per rate window |
+| `RATE_LIMIT_DURATION_MS` | `10000` | Rate window duration (ms) |
+| `JOB_ATTEMPTS` | `3` | Max retry attempts |
+| `JOB_BACKOFF_MS` | `5000` | Exponential backoff base |
+| `STALE_CATCHUP_THRESHOLD_MINUTES` | `1440` | Past-due window before flagging stale |
+| `WARMUP_ENABLED` | `true` | Toggle warmup throttling |
+| `LOG_PRETTY` | `true` | Pretty-print logs (`false` for JSON) |
 
 ---
 
@@ -345,6 +375,8 @@ Without the limiter these 40 would have gone out in roughly two seconds.
 
 ## Feature-to-code map
 
+### Backend
+
 | Feature | Implemented in |
 | --- | --- |
 | **Scheduler** (create → delayed job) | [`src/services/scheduling.ts`](backend/src/services/scheduling.ts) · [`src/queue/emailQueue.ts`](backend/src/queue/emailQueue.ts) · [`src/routes/emails.ts`](backend/src/routes/emails.ts) |
@@ -352,18 +384,19 @@ Without the limiter these 40 would have gone out in roughly two seconds.
 | **Rate limiting** (queue-wide send cap) | [`src/worker.ts`](backend/src/worker.ts) (`limiter`) · [`src/queue/emailQueue.ts`](backend/src/queue/emailQueue.ts) (`rateLimitConfig`) |
 | **Concurrency** (per-process bound) | [`src/worker.ts`](backend/src/worker.ts) (`concurrency`) |
 | **Send pipeline / retries** | [`src/queue/processor.ts`](backend/src/queue/processor.ts) · [`src/services/mailer.ts`](backend/src/services/mailer.ts) |
-| **Login / register / JWT** | [`src/services/auth.ts`](backend/src/services/auth.ts) · [`src/middleware/auth.ts`](backend/src/middleware/auth.ts) · [`src/routes/auth.ts`](backend/src/routes/auth.ts) · [`frontend/src/lib/auth.tsx`](frontend/src/lib/auth.tsx) · [`frontend/src/pages/LoginPage.tsx`](frontend/src/pages/LoginPage.tsx) |
-| **Dashboard** (tabs, polling) | [`frontend/src/pages/DashboardPage.tsx`](frontend/src/pages/DashboardPage.tsx) |
-| **Tables** (per-status, preview links) | [`frontend/src/features/emails/EmailTable.tsx`](frontend/src/features/emails/EmailTable.tsx) |
-| **Compose** (tz-aware picker) | [`frontend/src/features/emails/ComposeModal.tsx`](frontend/src/features/emails/ComposeModal.tsx) · [`frontend/src/lib/format.ts`](frontend/src/lib/format.ts) |
-| **Cancellation** | [`src/services/scheduling.ts`](backend/src/services/scheduling.ts) (`cancelScheduledEmail`) |
-| **Audit trail** (`EmailEvent`) | [`src/services/events.ts`](backend/src/services/events.ts) |
-| **Validation / error handling / logging** | [`src/middleware/validate.ts`](backend/src/middleware/validate.ts) · [`src/middleware/error.ts`](backend/src/middleware/error.ts) · [`src/lib/logger.ts`](backend/src/lib/logger.ts) · [`src/config/env.ts`](backend/src/config/env.ts) |
-| **Bonus A — Deliverability Guard** | [`src/services/deliverability.ts`](backend/src/services/deliverability.ts) · badge in [`frontend/src/components/ui.tsx`](frontend/src/components/ui.tsx) |
-| **Bonus B — Warmup throttling** | [`src/services/warmup.ts`](backend/src/services/warmup.ts) · enforced in [`src/queue/processor.ts`](backend/src/queue/processor.ts) · [`frontend/src/features/mailboxes/MailboxPanel.tsx`](frontend/src/features/mailboxes/MailboxPanel.tsx) |
-| **Bonus C — Rotation, tracking, follow-ups** | [`src/services/scheduling.ts`](backend/src/services/scheduling.ts) (`pickMailboxId`) · [`src/services/tracking.ts`](backend/src/services/tracking.ts) · [`src/routes/track.ts`](backend/src/routes/track.ts) · [`src/services/followUp.ts`](backend/src/services/followUp.ts) |
-| **Seed / demo tooling** | [`prisma/seed.ts`](backend/prisma/seed.ts) · [`scripts/burst.ts`](backend/scripts/burst.ts) |
-| **Tests** | [`backend/tests/`](backend/tests) |
+
+### Frontend
+
+| Feature | Implemented in |
+| --- | --- |
+| **Login / Register** | [`LoginPage.tsx`](frontend/src/pages/LoginPage.tsx) · [`RegisterPage.tsx`](frontend/src/pages/RegisterPage.tsx) · [`auth.tsx`](frontend/src/lib/auth.tsx) |
+| **Dashboard** (stat cards, tabs, polling) | [`DashboardPage.tsx`](frontend/src/pages/DashboardPage.tsx) |
+| **Tables** (per-status, preview links) | [`EmailTable.tsx`](frontend/src/features/emails/EmailTable.tsx) |
+| **Compose** (tz-aware picker) | [`ComposeModal.tsx`](frontend/src/features/emails/ComposeModal.tsx) |
+| **Cancellation** | via [`scheduling.ts`](backend/src/services/scheduling.ts) (`cancelScheduledEmail`) |
+| **Mailbox panel** (warmup, rotation) | [`MailboxPanel.tsx`](frontend/src/features/mailboxes/MailboxPanel.tsx) |
+| **MoltenMetal background** | [`MoltenMetal.tsx`](frontend/src/components/MoltenMetal.tsx) — WebGL shader via `ogl` |
+| **Glassmorphic design system** | [`index.css`](frontend/src/index.css) · [`ui.tsx`](frontend/src/components/ui.tsx) |
 
 ---
 
@@ -448,12 +481,6 @@ cookie because the SPA and the API are on different origins in development, whic
 `SameSite=None` + credentialed CORS + CSRF handling for no real benefit at this scale. The
 trade-off (an XSS becomes a session compromise) is recorded in `ASSUMPTIONS.md`.
 
-Example:
-
-```bash
-curl -s -X POST http://localhost:4000/api/auth/login -H 'Content-Type: application/json' -d '{"email":"demo@outboxpilot.dev","password":"demo1234"}'
-```
-
 ---
 
 ## Tests
@@ -471,9 +498,6 @@ process edge is faked, so the suite runs on a clean checkout and in CI without c
 | [`tests/unit/reconciliation.test.ts`](backend/tests/unit/reconciliation.test.ts) | boot reconciliation: the requeue-vs-stale policy including exact threshold boundaries, `PENDING` rows, a single clock across the sweep, and failure isolation when one row throws |
 | [`tests/unit/deliverability.test.ts`](backend/tests/unit/deliverability.test.ts) | the scorer, including purity and score clamping |
 | [`tests/integration/createEmail.test.ts`](backend/tests/integration/createEmail.test.ts) | `POST /api/emails` end to end through express → auth → zod → scheduling → `queue.add`, asserting the job is enqueued **with the correct delay** and the deterministic job id; plus write-ordering (row exists before Redis is touched), the event trail, past-time clamping, auth and validation rejection, and the cancel path |
-
-The queue-level limiter itself is BullMQ's, so it is verified by observation (the burst
-histogram above) rather than by unit-testing a library.
 
 ---
 
@@ -525,9 +549,6 @@ docker exec outbox-redis redis-cli ZCARD bull:outbox-emails:delayed
 something, backdate it, restart, and watch it land in **Failed** with *"missed window, flagged for
 manual review"* instead of blasting out.
 
-Logs are pino + pino-pretty (colourised, `pid`/`hostname` stripped, tracking-pixel and health
-requests filtered out), so the terminal is readable on camera. Set `LOG_PRETTY=false` for JSON.
-
 ---
 
 ## Troubleshooting
@@ -536,7 +557,7 @@ requests filtered out), so the terminal is readable on camera. Set `LOG_PRETTY=f
 running. If it crash-loops on Windows, check
 `%LOCALAPPDATA%\Docker\log\host\com.docker.backend.exe.log` — a stale socket in
 `%LOCALAPPDATA%\Docker\run\` (`dockerInference`) can block startup; rename that `run` folder
-while Docker is stopped and relaunch. (This bit me while building it.)
+while Docker is stopped and relaunch.
 
 **`Invalid environment configuration` on boot.** The message names the offending variable.
 Usually a missing `.env` (`cp .env.example .env`) or a `JWT_SECRET` under 16 characters.
