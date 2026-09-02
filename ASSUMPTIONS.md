@@ -184,7 +184,6 @@ reputation, none of which are meaningful against Ethereal.
 | **WebSocket/SSE live updates** | The dashboard polls every 4s. Noted in a comment in `DashboardPage.tsx`. The worker already writes an `EmailEvent` per transition, which is exactly the stream you would publish. |
 | **Editing a scheduled email** | Only create and cancel. Editing means changing the delay, which means `job.changeDelay()` plus revalidation — cancel-and-recreate covers the need. |
 | **Mailbox CRUD in the UI** | `POST /api/mailboxes` exists and is tested by hand; the UI only lists mailboxes and advances warmup. The seed creates two, which is what the demo needs. |
-| **Email detail drawer** | `GET /api/emails/:id` returns the full event timeline and is used by nothing in the UI yet. It is the single highest-value next addition — the audit trail is the interesting part of this system. |
 | **Bulk actions** | No multi-select cancel. |
 | **Refresh tokens / password reset / email verification** | Out of scope for a take-home; register + login only. |
 | **Frontend tests** | All 56 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
@@ -240,6 +239,34 @@ not a squeezed one — which is not built.
 
 ---
 
+### 4a.5 Accessibility — measured, not assumed — **Done**
+
+Every text/background pair in the palette was computed against WCAG 2.1 rather than eyeballed,
+and three tokens moved as a result:
+
+| Token | Was | Now | Ratio on surface |
+| --- | --- | --- | --- |
+| `ink-3` (labels, hints, relative times) | `#8c8579` | `#766f63` | 3.56 → **4.84** (AA) |
+| `st-cancelled` | `#948d81` | `#766f63` | 3.20 → **4.84** (AA) |
+| form-control boundary | `rule-strong` `#cdc5b4` | `field` `#948c7b` | 1.67 → **3.25** (1.4.11) |
+
+`rule` and `rule-strong` stay light *on purpose* — they are decorative dividers, which 1.4.11
+exempts. Only the boundary of an actual control had to move, so the hairline aesthetic survives
+where it does no harm.
+
+Also done in this pass: both dialogs trap Tab and restore focus to their trigger (`aria-modal`
+was previously a promise the app did not keep), body scroll locks behind them, there is a skip
+link and `<main>` landmarks, toasts are `aria-live`, the document title tracks the route, and
+status is carried by a dot **and** a word so it never depends on hue alone.
+
+### 4a.6 Still not covered by automated tests
+
+The contrast figures above were computed once, by hand, at design time. They are not asserted
+anywhere, so a future palette edit could regress them silently. An axe-core pass in CI is the
+right fix and is not built.
+
+---
+
 ## 5. Environment and operational assumptions
 
 - **Single-tenant-ish.** Every query is scoped by `userId`, but there is no organisation/team
@@ -278,6 +305,8 @@ Everything in this list was actually run, not just written:
 - ✅ Warmup counters incrementing per send and surfaced in the sidebar
 - ✅ Tracking pixel returns a real 1×1 PNG, records `OPENED` once, idempotent on repeat hits
 - ✅ Live deliverability preview in compose (spammy draft scored 20 with 4 flags, still schedulable)
+- ✅ Detail drawer renders the real event trail (CREATED → 4× QUEUED from three restarts, with shrinking delays → SENDING → SENT → OPENED)
+- ✅ Modal/drawer focus trap holds after 12 Tabs; focus returns to the trigger; scroll lock released
 - ✅ `npm test` — 56 passing, no containers required
 - ✅ `tsc --noEmit` clean on both backend and frontend under `strict`
 - ✅ `npm run build` clean on both
