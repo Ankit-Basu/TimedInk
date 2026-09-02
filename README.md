@@ -160,14 +160,27 @@ origin and there is no CORS preflight on every dashboard poll. Set `VITE_API_BAS
 would rather the browser hit the API directly. See `frontend/.env.example`.
 
 **UI stack:** React 19 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query. No component
-library, no animation library, no webfont — the four runtime dependencies are React, React DOM,
-React Router and TanStack Query.
+library and no animation library — the four runtime dependencies are React, React DOM, React
+Router and TanStack Query.
 
-The interface is deliberately plain. This is an operations tool: its job is to make a table of
-email states scannable at a glance, so depth is a 1px border and a flat surface step rather than
-blur or shadow, colour is one accent plus six functional status hues, and the type is the system
-stack at 13-14px with tabular numerals so timestamps and counts do not jitter as they tick. The
-whole design system is ~140 lines of tokens in [`index.css`](frontend/src/index.css).
+The interface is editorial: a warm paper canvas, ink type, hairline rules, and a single amber
+accent reserved for primary actions and the active marker. Depth is a 1px rule and a surface one
+shade lighter than the canvas — never a shadow or a blur. The whole app sits inside a ruled
+frame with the paper showing around it, which is what makes it read as a composed page rather
+than a browser window.
+
+Three typefaces, each doing a specific job:
+
+| Face | Used for |
+| --- | --- |
+| Instrument Serif | display only — page titles, the auth headline, modal headings |
+| Inter | all running text and UI |
+| JetBrains Mono | micro-labels, timestamps, scores, counts |
+
+Each has a full system fallback in [`index.css`](frontend/src/index.css), so the app stays
+legible if the webfonts never arrive. Timestamps render as `2026-08-31 02:29` — shorter than a
+locale string in a fixed-width column, sorts the way it reads, and 24h removes the AM/PM
+ambiguity that bites people scheduling near midnight.
 
 ---
 

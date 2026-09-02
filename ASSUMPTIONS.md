@@ -213,24 +213,30 @@ harder call:
   `min(100, value * 8)` — a bar that encoded nothing, filling up as a number grew with no
   denominator behind it. It has been removed rather than restyled.
 
-What replaced it: one accent colour, six functional status hues, flat surfaces separated by a
-1px border, the system font stack, and tabular numerals so timestamps and counts do not jitter.
-`index.css` went from ~530 lines to ~140. `ogl` and `framer-motion` were removed, taking the
-runtime dependency list down to React, React DOM, React Router and TanStack Query.
+What replaced it is an editorial layout: a warm paper canvas, ink type, hairline rules, one
+amber accent, and a ruled frame around the whole app. `ogl` and `framer-motion` were removed,
+taking the runtime dependency list down to React, React DOM, React Router and TanStack Query.
 
-### 4a.2 Dark-only, with no theme toggle — **Deliberate**
+### 4a.2 Three webfonts, deliberately — **Done**
 
-The palette is defined once as CSS custom properties in `index.css`, so a light theme is a token
-swap rather than a rewrite, but no light variant is shipped and there is no toggle. Two themes
-means two sets of contrast decisions to verify, and only one of them would get demoed.
+Instrument Serif (display), Inter (UI), JetBrains Mono (labels and figures), from Google Fonts.
+An earlier pass ran on the system stack alone; in this layout type *is* the design, so the three
+faces earn their bytes. Each has a full system fallback declared in `index.css`, so a reviewer
+with no network still gets a working, legible app — just a plainer one.
 
-### 4a.3 Density over comfort — **Deliberate**
+### 4a.3 Light-only, with no theme toggle — **Deliberate**
 
-13px base type, ~44px rows, seven columns fixed with a `colgroup`. That is denser than a
-marketing site and about right for an operator scanning a send queue. The table sets a
-940px minimum width and scrolls horizontally below it rather than reflowing or hiding columns,
-because on a phone the honest answer is that this view needs a different layout, not a squeezed
-one — which is not built.
+The palette is defined once as CSS custom properties, so a dark variant is a token swap rather
+than a rewrite, but none is shipped and there is no toggle. Two themes means two sets of contrast
+decisions to verify, and only one of them would get demoed.
+
+### 4a.4 Density over comfort in the table — **Deliberate**
+
+13px body type, seven columns fixed with a `colgroup`, every cell `overflow-hidden` and
+truncating with the full value in `title`. The display type is generous; the data is not. The
+table sets a 940px minimum width and scrolls horizontally below it rather than reflowing or
+hiding columns, because on a phone the honest answer is that this view needs a different layout,
+not a squeezed one — which is not built.
 
 ---
 
