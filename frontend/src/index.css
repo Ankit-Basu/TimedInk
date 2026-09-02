@@ -19,26 +19,26 @@
   --color-canvas: #070714;
   --color-brand: #8b5cf6;
 
-  /* ── 4-Level Glass Elevation System ──────────────────────────────── */
-  --glass-1-bg: rgba(255, 255, 255, 0.035);
-  --glass-1-blur: 14px;
-  --glass-1-border: rgba(255, 255, 255, 0.07);
-  --glass-1-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* ── 4-Level High-Performance Glass Elevation System ────────────── */
+  --glass-1-bg: rgba(255, 255, 255, 0.04);
+  --glass-1-blur: 8px;
+  --glass-1-border: rgba(255, 255, 255, 0.08);
+  --glass-1-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 16px rgba(0, 0, 0, 0.25);
 
-  --glass-2-bg: rgba(255, 255, 255, 0.05);
-  --glass-2-blur: 20px;
+  --glass-2-bg: rgba(14, 14, 26, 0.72);
+  --glass-2-blur: 10px;
   --glass-2-border: rgba(255, 255, 255, 0.09);
-  --glass-2-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-2-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 24px rgba(0, 0, 0, 0.35);
 
-  --glass-3-bg: rgba(255, 255, 255, 0.07);
-  --glass-3-blur: 26px;
-  --glass-3-border: rgba(255, 255, 255, 0.13);
-  --glass-3-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 16px 48px rgba(0, 0, 0, 0.5);
+  --glass-3-bg: rgba(14, 14, 26, 0.76);
+  --glass-3-blur: 12px;
+  --glass-3-border: rgba(255, 255, 255, 0.11);
+  --glass-3-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 32px rgba(0, 0, 0, 0.45);
 
-  --glass-4-bg: rgba(255, 255, 255, 0.09);
-  --glass-4-blur: 32px;
-  --glass-4-border: rgba(255, 255, 255, 0.18);
-  --glass-4-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 24px 64px rgba(0, 0, 0, 0.65);
+  --glass-4-bg: rgba(12, 12, 22, 0.88);
+  --glass-4-blur: 14px;
+  --glass-4-border: rgba(255, 255, 255, 0.15);
+  --glass-4-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 20px 48px rgba(0, 0, 0, 0.6);
 
   /* ── Custom Status Colors (shifted off Tailwind defaults) ────────── */
   --status-sent: #2dd4a0;
@@ -84,24 +84,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Global Noise / Grain Overlay (2% opacity) ──────────────────────── */
+/* ── Global Noise / Grain Overlay (GPU Texture Cached) ──────────────── */
 #root::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  background-size: 256px 256px;
+  background-size: 128px 128px;
+  transform: translateZ(0);
 }
 
-/* ── 4 Elevation Classes (varied border-radius) ────────────────────── */
+/* ── 4 Elevation Classes (varied border-radius, high-fps) ──────────── */
 .elevation-1 {
   background-color: var(--glass-1-bg);
-  backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-1-blur)) saturate(180%);
+  backdrop-filter: blur(var(--glass-1-blur));
+  -webkit-backdrop-filter: blur(var(--glass-1-blur));
   border: 1px solid var(--glass-1-border);
   box-shadow: var(--glass-1-shadow);
   border-radius: 0.75rem; /* 12px — stat cards, compact items */
@@ -109,8 +110,8 @@ body {
 
 .elevation-2 {
   background-color: var(--glass-2-bg);
-  backdrop-filter: blur(var(--glass-2-blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-2-blur)) saturate(180%);
+  backdrop-filter: blur(var(--glass-2-blur));
+  -webkit-backdrop-filter: blur(var(--glass-2-blur));
   border: 1px solid var(--glass-2-border);
   box-shadow: var(--glass-2-shadow);
   border-radius: 1rem; /* 16px — table panels */
@@ -118,8 +119,8 @@ body {
 
 .elevation-3 {
   background-color: var(--glass-3-bg);
-  backdrop-filter: blur(var(--glass-3-blur)) saturate(190%);
-  -webkit-backdrop-filter: blur(var(--glass-3-blur)) saturate(190%);
+  backdrop-filter: blur(var(--glass-3-blur));
+  -webkit-backdrop-filter: blur(var(--glass-3-blur));
   border: 1px solid var(--glass-3-border);
   box-shadow: var(--glass-3-shadow);
   border-radius: 0.875rem; /* 14px — sidebar panels */
@@ -127,44 +128,51 @@ body {
 
 .elevation-4 {
   background-color: var(--glass-4-bg);
-  backdrop-filter: blur(var(--glass-4-blur)) saturate(200%);
-  -webkit-backdrop-filter: blur(var(--glass-4-blur)) saturate(200%);
+  backdrop-filter: blur(var(--glass-4-blur));
+  -webkit-backdrop-filter: blur(var(--glass-4-blur));
   border: 1px solid var(--glass-4-border);
   box-shadow: var(--glass-4-shadow);
-  border-radius: 1.25rem; /* 20px — modals (distinct from everything) */
+  border-radius: 1.25rem; /* 20px — modals */
 }
 
-/* ── SpotlightCard CSS ─────────────────────────────────────────────── */
-.spotlight-card {
+/* ── SpotlightCard CSS (official ReactBits pattern) ────────────────── */
+.card-spotlight {
   position: relative;
-  overflow: hidden;
   border-radius: 0.75rem;
-  background: var(--glass-1-bg);
+  border: 1px solid var(--glass-1-border);
+  background-color: var(--glass-1-bg);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid var(--glass-1-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  --spotlight-color: rgba(255, 255, 255, 0.05);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.spotlight-card:hover {
+.card-spotlight:hover {
   transform: translateY(-2px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
-.spotlight-card-glow {
+.card-spotlight::before {
+  content: '';
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), var(--spotlight-color), transparent 80%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
   pointer-events: none;
-  border-radius: inherit;
-  transition: opacity 0.35s ease;
-  z-index: 1;
 }
 
-.spotlight-card-content {
-  position: relative;
-  z-index: 2;
+.card-spotlight:hover::before,
+.card-spotlight:focus-within::before {
+  opacity: 0.6;
 }
 
 /* ── StarBorder CSS ────────────────────────────────────────────────── */

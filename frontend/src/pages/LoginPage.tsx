@@ -88,6 +88,8 @@ export default function LoginPage() {
   );
 }
 
+const AUTH_PARTICLE_COLORS = ['#ffffff', '#f5d0fe', '#c084fc', '#a855f7', '#818cf8', '#38bdf8', '#e879f9'];
+
 export function AuthShell({
   title,
   subtitle,
@@ -99,21 +101,20 @@ export function AuthShell({
 }) {
   return (
     <div className="relative flex min-h-full items-center justify-center px-4 py-12 overflow-hidden selection:bg-violet-500/30">
-      {/* Particles background (replaces MoltenMetal — much lighter) */}
+      {/* High-intensity Particles background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Particles
-          particleColors={['#8B5CF6', '#a78bfa', '#6d52c6']}
-          particleCount={150}
-          particleSpread={10}
+          particleColors={AUTH_PARTICLE_COLORS}
+          particleCount={200}
+          particleSpread={11}
           speed={0.12}
-          particleBaseSize={90}
+          particleBaseSize={150}
           moveParticlesOnHover
           particleHoverFactor={0.4}
-          alphaParticles
           disableRotation={false}
-          sizeRandomness={0.8}
-          cameraDistance={20}
-          className="opacity-45"
+          sizeRandomness={0.7}
+          cameraDistance={18}
+          className="opacity-95"
         />
       </div>
 

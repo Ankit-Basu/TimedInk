@@ -82,14 +82,52 @@ const STAT_TEXT_COLORS: Record<string, string> = {
   cancelled: 'text-[var(--status-cancelled)]',
 };
 
+/* High-visibility vibrant particle colors for glowing contrast */
+const DASHBOARD_PARTICLE_COLORS = [
+  '#ffffff',
+  '#f5d0fe',
+  '#c084fc',
+  '#a855f7',
+  '#818cf8',
+  '#38bdf8',
+  '#e879f9',
+];
+
+/** Isolated countdown component so the entire Dashboard doesn't re-render every second */
+function LiveSyncIndicator({ pollIntervalMs, isFetching }: { pollIntervalMs: number; isFetching: boolean }) {
+  const [seconds, setSeconds] = useState(Math.round(pollIntervalMs / 1000));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSeconds((prev) => (prev <= 1 ? Math.round(pollIntervalMs / 1000) : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [pollIntervalMs]);
+
+  useEffect(() => {
+    if (isFetching) {
+      setSeconds(Math.round(pollIntervalMs / 1000));
+    }
+  }, [isFetching, pollIntervalMs]);
+
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 select-none">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--status-sent)] opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--status-sent)]" />
+      </span>
+      <span>
+        Live sync in <span className="font-mono text-slate-400 font-semibold">{seconds}s</span>
+      </span>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const [activeTabId, setActiveTabId] = useState(TABS[0]!.id);
   const [page, setPage] = useState(1);
   const [composeOpen, setComposeOpen] = useState(false);
-
-  // Live countdown to next poll
-  const [secondsUntilPoll, setSecondsUntilPoll] = useState(Math.round(POLL_INTERVAL_MS / 1000));
 
   const activeTab = TABS.find((t) => t.id === activeTabId) ?? TABS[0]!;
 
@@ -105,21 +143,6 @@ export default function DashboardPage() {
     queryFn: () => api.emailStats(),
     refetchInterval: POLL_INTERVAL_MS,
   });
-
-  // Countdown timer effect
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsUntilPoll((prev) => (prev <= 1 ? Math.round(POLL_INTERVAL_MS / 1000) : prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Reset timer on query refetch
-  useEffect(() => {
-    if (emailsQuery.isFetching) {
-      setSecondsUntilPoll(Math.round(POLL_INTERVAL_MS / 1000));
-    }
-  }, [emailsQuery.isFetching]);
 
   const countFor = (tab: Tab): number =>
     statsQuery.data ? tab.statuses.reduce((sum, s) => sum + (statsQuery.data.counts[s] ?? 0), 0) : 0;
@@ -140,20 +163,19 @@ export default function DashboardPage() {
 
   return (
     <div className="relative min-h-full selection:bg-violet-500/30">
-      {/* Particles Background (lightweight, replaces MoltenMetal) */}
+      {/* High-Intensity Particles Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Particles
-          particleColors={['#8B5CF6', '#6d52c6', '#3b2a7a']}
-          particleCount={120}
+          particleColors={DASHBOARD_PARTICLE_COLORS}
+          particleCount={280}
           particleSpread={12}
-          speed={0.08}
-          particleBaseSize={80}
+          speed={0.1}
+          particleBaseSize={160}
           moveParticlesOnHover={false}
-          alphaParticles
           disableRotation={false}
-          sizeRandomness={0.6}
-          cameraDistance={22}
-          className="opacity-30"
+          sizeRandomness={0.7}
+          cameraDistance={18}
+          className="opacity-95"
         />
       </div>
 
@@ -192,7 +214,6 @@ export default function DashboardPage() {
             >
               <SpotlightCard
                 spotlightColor={SPOTLIGHT_COLORS[stat.id]}
-                spotlightSize={260}
                 className={stat.id === 'scheduled' ? 'border-violet-500/20' : ''}
               >
                 <div className="p-4">
@@ -318,15 +339,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Live Auto-Refresh Indicator */}
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 select-none">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--status-sent)] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--status-sent)]" />
-              </span>
-              <span>
-                Live sync in <span className="font-mono text-slate-400 font-semibold">{secondsUntilPoll}s</span>
-              </span>
-            </div>
+            <LiveSyncIndicator
+              pollIntervalMs={POLL_INTERVAL_MS}
+              isFetching={emailsQuery.isFetching}
+            />
           </section>
 
           {/* Mailbox Sidebar */}

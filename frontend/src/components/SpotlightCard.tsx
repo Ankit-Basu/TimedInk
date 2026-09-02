@@ -1,60 +1,55 @@
-import { useRef, type MouseEvent, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 interface SpotlightCardProps {
   children: ReactNode;
   className?: string;
-  /** Color of the spotlight glow, e.g. 'rgba(139, 92, 246, 0.25)' */
+  /** Color of the spotlight glow, e.g. 'rgba(0, 229, 255, 0.2)' */
   spotlightColor?: string;
-  /** Size of the spotlight radius in px */
-  spotlightSize?: number;
 }
 
 /**
  * SpotlightCard — Pointer-reactive radial glow card from react-bits.
- * Tracks mouse position over the card and renders a radial gradient
- * spotlight that follows the cursor, making the card feel alive.
+ * Uses CSS custom properties for the mouse position and a ::before
+ * pseudo-element radial gradient that fades in on hover.
  * @see https://reactbits.dev/components/spotlight-card
  */
-export default function SpotlightCard({
+const SpotlightCard = ({
   children,
   className = '',
-  spotlightColor = 'rgba(255, 255, 255, 0.15)',
-  spotlightSize = 280,
-}: SpotlightCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const spotlightRef = useRef<HTMLDivElement>(null);
+  spotlightColor = 'rgba(255, 255, 255, 0.25)',
+}: SpotlightCardProps) => {
+  const divRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    const spotlight = spotlightRef.current;
-    if (!card || !spotlight) return;
+  const rafRef = useRef<number | null>(null);
 
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = divRef.current;
+    if (!el) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
 
-    spotlight.style.background = `radial-gradient(${spotlightSize}px circle at ${x}px ${y}px, ${spotlightColor}, transparent)`;
-    spotlight.style.opacity = '1';
-  };
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
 
-  const handleMouseLeave = () => {
-    const spotlight = spotlightRef.current;
-    if (spotlight) spotlight.style.opacity = '0';
+      el.style.setProperty('--mouse-x', `${x}px`);
+      el.style.setProperty('--mouse-y', `${y}px`);
+      el.style.setProperty('--spotlight-color', spotlightColor);
+    });
   };
 
   return (
     <div
-      ref={cardRef}
-      className={`spotlight-card ${className}`}
+      ref={divRef}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      className={`card-spotlight ${className}`}
     >
-      <div
-        ref={spotlightRef}
-        className="spotlight-card-glow"
-        style={{ opacity: 0 }}
-      />
-      <div className="spotlight-card-content">{children}</div>
+      {children}
     </div>
   );
-}
+};
+
+export default SpotlightCard;
