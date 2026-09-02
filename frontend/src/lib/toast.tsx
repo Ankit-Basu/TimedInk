@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -8,7 +8,7 @@ export interface ToastItem {
   type: ToastType;
   title: string;
   message?: string;
-  durationMs?: number;
+  durationMs: number;
 }
 
 interface ToastContextValue {
@@ -18,7 +18,15 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const MAX_VISIBLE = 3;
+const DEFAULT_DURATION_MS = 4000;
+
+/**
+ * Minimal toast stack. Deliberately hand-rolled with a CSS keyframe rather
+ * than an animation library — three lines of transient text do not justify a
+ * runtime dependency.
+ */
+export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const removeToast = useCallback((id: string) => {
@@ -26,109 +34,69 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const showToast = useCallback(
-    (type: ToastType, title: string, message?: string, durationMs = 4000) => {
-      const id = Math.random().toString(36).substring(2, 9);
-      setToasts((prev) => [...prev.slice(-3), { id, type, title, message, durationMs }]);
+    (type: ToastType, title: string, message?: string, durationMs = DEFAULT_DURATION_MS) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setToasts((prev) => [...prev, { id, type, title, message, durationMs }].slice(-MAX_VISIBLE));
     },
     [],
   );
 
+  const value = useMemo(() => ({ showToast, removeToast }), [showToast, removeToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast, removeToast }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <ToastCard key={toast.id} toast={toast} onDismiss={() => removeToast(toast.id)} />
-          ))}
-        </AnimatePresence>
+      <div
+        // aria-live so a screen reader announces the outcome of an action that
+        // otherwise only changes a row somewhere else on the page.
+        aria-live="polite"
+        className="pointer-events-none fixed top-4 right-4 z-50 flex w-full max-w-xs flex-col gap-2"
+      >
+        {toasts.map((toast) => (
+          <ToastCard key={toast.id} toast={toast} onDismiss={() => removeToast(toast.id)} />
+        ))}
       </div>
     </ToastContext.Provider>
   );
+}
+
+const ACCENT: Record<ToastType, string> = {
+  success: 'bg-st-sent',
+  error: 'bg-st-failed',
+  info: 'bg-accent',
 };
 
-export const useToast = (): ToastContextValue => {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within ToastProvider');
-  return ctx;
-};
-
-const ToastCard: React.FC<{ toast: ToastItem; onDismiss: () => void }> = ({ toast, onDismiss }) => {
-  const duration = (toast.durationMs ?? 4000) / 1000;
-
-  const iconColors: Record<ToastType, { icon: string; border: string; glow: string }> = {
-    success: {
-      icon: 'text-emerald-400',
-      border: 'border-emerald-500/30',
-      glow: 'shadow-[0_0_24px_rgba(16,185,129,0.2)]',
-    },
-    error: {
-      icon: 'text-red-400',
-      border: 'border-red-500/30',
-      glow: 'shadow-[0_0_24px_rgba(239,68,68,0.2)]',
-    },
-    info: {
-      icon: 'text-violet-400',
-      border: 'border-violet-500/30',
-      glow: 'shadow-[0_0_24px_rgba(139,92,246,0.2)]',
-    },
-  };
-
-  const currentTheme = iconColors[toast.type];
+function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+  useEffect(() => {
+    const handle = setTimeout(onDismiss, toast.durationMs);
+    return () => clearTimeout(handle);
+  }, [toast.durationMs, onDismiss]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -20, scale: 0.94 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 40, scale: 0.9 }}
-      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-      className={`pointer-events-auto relative overflow-hidden elevation-4 rounded-xl p-4 ${currentTheme.border} ${currentTheme.glow}`}
-    >
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 mt-0.5">
-          {toast.type === 'success' && (
-            <svg className={`h-5 w-5 ${currentTheme.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          )}
-          {toast.type === 'error' && (
-            <svg className={`h-5 w-5 ${currentTheme.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-            </svg>
-          )}
-          {toast.type === 'info' && (
-            <svg className={`h-5 w-5 ${currentTheme.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-            </svg>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0 pr-4">
-          <p className="text-sm font-semibold text-white">{toast.title}</p>
-          {toast.message && <p className="mt-0.5 text-xs text-slate-300 line-clamp-2">{toast.message}</p>}
-        </div>
-
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-slate-400 hover:text-white transition-colors"
-          aria-label="Dismiss notification"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+    <div className="toast-enter pointer-events-auto flex gap-3 rounded-md border border-line bg-surface-2 p-3">
+      <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${ACCENT[toast.type]}`} aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-fg">{toast.title}</p>
+        {toast.message && (
+          <p className="mt-0.5 text-xs leading-relaxed break-words text-fg-muted">{toast.message}</p>
+        )}
       </div>
-
-      {/* Auto-dismiss shrinking progress bar */}
-      <motion.div
-        initial={{ width: '100%' }}
-        animate={{ width: '0%' }}
-        transition={{ duration, ease: 'linear' }}
-        onAnimationComplete={onDismiss}
-        className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-violet-500 to-fuchsia-500"
-      />
-    </motion.div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 self-start rounded p-0.5 text-fg-muted transition-colors hover:text-fg"
+      >
+        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+        </svg>
+      </button>
+    </div>
   );
-};
+}
+
+export function useToast(): ToastContextValue {
+  const context = useContext(ToastContext);
+  if (!context) throw new Error('useToast must be used inside <ToastProvider>');
+  return context;
+}

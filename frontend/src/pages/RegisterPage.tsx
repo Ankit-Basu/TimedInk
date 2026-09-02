@@ -33,7 +33,7 @@ export default function RegisterPage() {
     } catch (err) {
       setError(
         err instanceof ApiError
-          ? err.fieldMessages[0] ?? err.message
+          ? (err.fieldMessages[0] ?? err.message)
           : 'Could not create the account. Please try again.',
       );
     } finally {
@@ -42,8 +42,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Launch a reviewer-ready outbound control room in seconds.">
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+    <AuthShell subtitle="Create an account to get started.">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {error && <Alert>{error}</Alert>}
 
         <Field label="Name" required>
@@ -89,9 +89,9 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-5 text-[13px] text-fg-muted">
         Already registered?{' '}
-        <Link to="/login" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">
+        <Link to="/login" className="text-accent hover:underline">
           Sign in
         </Link>
       </p>

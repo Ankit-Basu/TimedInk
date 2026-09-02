@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
 import { api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
-import { formatDateTime, formatRelative, truncate } from '../../lib/format';
+import { formatDateTime, formatRelative } from '../../lib/format';
 import { Button, DeliverabilityBadge, StatusBadge } from '../../components/ui';
 import type { ScheduledEmail } from '../../lib/types';
 
-const CANCELLABLE = new Set(['PENDING', 'QUEUED']);
+const CANCELLABLE = new Set<ScheduledEmail['status']>(['PENDING', 'QUEUED']);
+
+const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
   const queryClient = useQueryClient();
@@ -14,122 +15,135 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
 
   const cancel = useMutation({
     mutationFn: (id: string) => api.cancelEmail(id),
-    onSuccess: (data) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['emails'] });
       void queryClient.invalidateQueries({ queryKey: ['email-stats'] });
-      showToast('info', 'Email Cancelled', `Removed "${truncate(data.subject, 32)}" from active queue.`);
+      showToast('success', 'Email cancelled', 'Its queued job was removed.');
     },
-    onError: (err) => {
-      showToast('error', 'Cancellation Failed', err instanceof Error ? err.message : 'Could not cancel');
+    onError: (error: unknown) => {
+      showToast(
+        'error',
+        'Could not cancel',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
     },
   });
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full border-separate border-spacing-0 text-sm">
+      {/*
+        `table-fixed` with an explicit colgroup: column widths stay put as rows
+        change, and the subject cell can ellipsis instead of collapsing into a
+        one-word-per-line column when the viewport gets tight.
+      */}
+      <table className="w-full min-w-[940px] table-fixed text-left text-[13px]">
+        <colgroup>
+          <col className="w-[18%]" />
+          <col className="w-[21%]" />
+          <col className="w-[16%]" />
+          <col className="w-[13%]" />
+          <col className="w-[10%]" />
+          <col className="w-[9%]" />
+          <col className="w-[13%]" />
+        </colgroup>
         <thead>
-          <tr className="text-left text-[11px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Recipient</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Subject</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Scheduled For</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Sender</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Score</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5">Status</th>
-            <th scope="col" className="bg-white/[0.035] px-6 py-3.5 text-right">
+          <tr className="border-b border-line text-xs font-medium text-fg-muted">
+            <th scope="col" className="px-4 py-2.5 font-medium">Recipient</th>
+            <th scope="col" className="px-4 py-2.5 font-medium">Subject</th>
+            <th scope="col" className="px-4 py-2.5 font-medium">Scheduled</th>
+            <th scope="col" className="px-4 py-2.5 font-medium">From</th>
+            <th scope="col" className="px-4 py-2.5 font-medium">Score</th>
+            <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
+            <th scope="col" className="px-4 py-2.5 text-right font-medium">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
 
-        <tbody>
-          {emails.map((email, index) => (
-            <motion.tr
-              key={email.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.25) }}
-              className="group align-top transition-colors duration-150 hover:bg-white/[0.045]"
-            >
-              <td className="border-t border-white/[0.055] px-6 py-4 whitespace-nowrap">
-                <div className="font-semibold text-slate-200">{email.to}</div>
-                {email.cc && <div className="text-[11px] text-slate-500 font-mono">cc {email.cc}</div>}
+        <tbody className="divide-y divide-line">
+          {emails.map((email) => (
+            <tr key={email.id} className="align-top transition-colors hover:bg-surface-2">
+              <td className="px-4 py-3">
+                <div className="truncate text-fg" title={email.to}>{email.to}</div>
+                {email.cc && (
+                  <div className="truncate text-xs text-fg-muted" title={email.cc}>cc {email.cc}</div>
+                )}
                 {email.followUpOfId && (
-                  <span className="mt-1 inline-block rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300 ring-1 ring-violet-500/25">
-                    thread follow-up
-                  </span>
+                  <div className="mt-1 text-xs text-fg-muted">follow-up</div>
                 )}
               </td>
 
-              <td className="max-w-xs border-t border-white/[0.055] px-6 py-4">
-                <div className="text-slate-200 font-medium">{truncate(email.subject, 64)}</div>
+              <td className="px-4 py-3">
+                <div className="truncate text-fg-secondary" title={email.subject}>
+                  {email.subject}
+                </div>
                 {email.lastError && (
-                  <div className="mt-1 text-xs text-red-400 font-mono" title={email.lastError}>
-                    {truncate(email.lastError, 80)}
+                  <div className="truncate text-xs text-st-failed" title={email.lastError}>
+                    {email.lastError}
                   </div>
                 )}
                 {email.attempts > 1 && (
-                  <div className="mt-1 text-[11px] text-slate-500">{email.attempts} attempts</div>
+                  <div className="tabular mt-1 text-xs text-fg-muted">
+                    {email.attempts} attempts
+                  </div>
                 )}
               </td>
 
-              <td className="border-t border-white/[0.055] px-6 py-4 whitespace-nowrap">
-                <div className="text-slate-300 font-medium">{formatDateTime(email.scheduledAt)}</div>
-                <div className="text-xs text-slate-500">
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="tabular text-fg-secondary">{formatDateTime(email.scheduledAt)}</div>
+                <div className="mt-0.5 text-xs text-fg-muted">
                   {formatRelative(email.scheduledAt)}
-                  {email.timezone && email.timezone !== Intl.DateTimeFormat().resolvedOptions().timeZone && (
-                    <span className="ml-1 text-slate-600">· {email.timezone}</span>
+                  {/* Only worth showing when it differs from the viewer's zone. */}
+                  {email.timezone && email.timezone !== localZone && (
+                    <span> · set in {email.timezone}</span>
                   )}
                 </div>
               </td>
 
-              <td className="border-t border-white/[0.055] px-6 py-4 whitespace-nowrap">
+              <td className="px-4 py-3 text-fg-secondary">
                 {email.mailbox ? (
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-300">{email.mailbox.fromName}</span>
-                    <span className="text-[11px] text-slate-500 font-mono" title={email.mailbox.fromEmail}>
-                      {email.mailbox.fromEmail}
-                    </span>
-                  </div>
+                  <span className="block truncate" title={email.mailbox.fromEmail}>
+                    {email.mailbox.fromEmail}
+                  </span>
                 ) : (
-                  <span className="text-xs text-slate-600">—</span>
+                  <span className="text-fg-muted">—</span>
                 )}
               </td>
 
-              <td className="border-t border-white/[0.055] px-6 py-4 whitespace-nowrap">
+              <td className="px-4 py-3 whitespace-nowrap">
                 <DeliverabilityBadge
                   score={email.deliverabilityScore}
                   flags={email.deliverabilityFlags}
                 />
               </td>
 
-              <td className="border-t border-white/[0.055] px-6 py-4 whitespace-nowrap">
+              <td className="px-4 py-3 whitespace-nowrap">
                 <StatusBadge status={email.status} />
                 {email.openedAt && (
-                  <div className="mt-1 text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <div className="mt-0.5 text-xs text-fg-muted">
                     opened {formatRelative(email.openedAt)}
                   </div>
                 )}
               </td>
 
-              <td className="border-t border-white/[0.055] px-6 py-4 text-right whitespace-nowrap">
-                <div className="flex items-center justify-end gap-2">
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <div className="flex items-center justify-end gap-1.5">
                   {email.previewUrl && (
                     <a
                       href={email.previewUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="rounded-lg px-2.5 py-1 text-xs font-semibold text-[var(--color-aqua)] hover:text-white hover:bg-[var(--color-aqua)]/15 border border-[var(--color-aqua)]/30 transition-all duration-150 flex items-center gap-1 shadow-[0_0_18px_rgba(85,214,190,0.12)]"
+                      className="inline-flex h-7 items-center rounded-md border border-line px-2.5 text-xs
+                        text-fg-secondary transition-colors hover:border-line-strong hover:text-fg"
                     >
-                      <span>Preview</span>
-                      <span className="text-[10px]">↗</span>
+                      Preview
                     </a>
                   )}
 
                   {CANCELLABLE.has(email.status) && (
                     <Button
                       variant="danger"
-                      className="px-2.5 py-1 text-xs"
+                      size="sm"
                       loading={cancel.isPending && cancel.variables === email.id}
                       onClick={() => cancel.mutate(email.id)}
                     >
@@ -138,7 +152,7 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
                   )}
                 </div>
               </td>
-            </motion.tr>
+            </tr>
           ))}
         </tbody>
       </table>

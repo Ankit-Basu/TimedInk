@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ApiError, api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
 import { browserTimezone, datetimeLocalValue, localInputToUtcIso } from '../../lib/format';
-import { Alert, Button, DeliverabilityBadge, Field, Input, Textarea } from '../../components/ui';
+import { Alert, Button, Field, Input, Textarea } from '../../components/ui';
 import type { DeliverabilityPreview } from '../../lib/types';
 
 interface ComposeModalProps {
@@ -19,6 +18,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const timezone = useMemo(() => browserTimezone(), []);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
 
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
@@ -30,10 +30,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
   const [followUpAfterHours, setFollowUpAfterHours] = useState('');
   const [preview, setPreview] = useState<DeliverabilityPreview | null>(null);
 
-  // Word count helper
-  const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
-
-  // Reset on open
+  // Reset to a clean form (and a fresh default time) each time it opens.
   useEffect(() => {
     if (!open) return;
     setTo('');
@@ -43,9 +40,10 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
     setScheduledAtLocal(datetimeLocalValue(DEFAULT_LEAD_MINUTES));
     setFollowUpAfterHours('');
     setPreview(null);
+    // Land the caret in the first field rather than making the user click.
+    requestAnimationFrame(() => firstFieldRef.current?.focus());
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -55,7 +53,10 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // Live deliverability scoring (debounced)
+  /**
+   * Live deliverability preview (bonus A). Debounced so typing does not fire a
+   * request per keystroke; the endpoint is a pure function with no writes.
+   */
   useEffect(() => {
     if (!open) return;
     if (!subject && !body) {
@@ -67,6 +68,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
       api
         .previewScore(subject, body)
         .then(setPreview)
+        // A failed preview must never block composing.
         .catch(() => setPreview(null));
     }, 350);
 
@@ -80,6 +82,8 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
         ...(cc.trim() ? { cc: cc.trim() } : {}),
         subject: subject.trim(),
         body,
+        // The picker gives naive local wall-clock; convert to an absolute UTC
+        // instant before it leaves the browser. The server stores UTC only.
         scheduledAt: localInputToUtcIso(scheduledAtLocal),
         timezone,
         ...(followUpAfterHours ? { followUpAfterHours: Number(followUpAfterHours) } : {}),
@@ -87,19 +91,8 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ['emails'] });
       void queryClient.invalidateQueries({ queryKey: ['email-stats'] });
-      showToast(
-        'success',
-        'Email Scheduled',
-        `Queued for ${data.to} · Scheduled ${new Date(scheduledAtLocal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      );
+      showToast('success', 'Email scheduled', `Queued for ${data.to}.`);
       onClose();
-    },
-    onError: (err) => {
-      const msg =
-        err instanceof ApiError
-          ? err.fieldMessages.join(' · ') || err.message
-          : 'Could not schedule this email.';
-      showToast('error', 'Scheduling Failed', msg);
     },
   });
 
@@ -118,181 +111,154 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
     mutation.mutate();
   };
 
+  const scoreTone =
+    preview === null
+      ? ''
+      : preview.score >= 80
+        ? 'text-st-sent'
+        : preview.score >= 50
+          ? 'text-st-sending'
+          : 'text-st-failed';
+
   return (
-    <AnimatePresence>
-      <div
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#03050b]/78 backdrop-blur-2xl p-4 sm:p-6 md:p-10"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="compose-title"
-        onMouseDown={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 16 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 16 }}
-          transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="glass-panel w-full max-w-2xl elevation-4 overflow-hidden my-auto"
-        >
-          <div className="flex items-center justify-between border-b border-white/[0.09] px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-aqua)]/25 bg-[var(--color-aqua)]/10 text-[var(--color-aqua)] shadow-[0_0_24px_rgba(85,214,190,0.12)]">
-                <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                </svg>
-              </div>
-              <div>
-                <h2 id="compose-title" className="text-base font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Compose & Schedule
-                </h2>
-                <p className="text-[11px] text-slate-400">Delivery window guarded across restarts</p>
-              </div>
-            </div>
+    <div
+      className="fixed inset-0 z-40 overflow-y-auto bg-black/60 p-4 sm:p-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compose-title"
+      onMouseDown={(e) => {
+        // Only dismiss on a click that both starts and ends on the backdrop.
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="mx-auto w-full max-w-2xl rounded-lg border border-line bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 id="compose-title" className="text-sm font-medium text-fg">
+            Schedule an email
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded p-1 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="rounded-xl p-1.5 text-slate-400 hover:bg-white/[0.08] hover:text-white transition-all"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5" noValidate>
+          {errorMessage && <Alert>{errorMessage}</Alert>}
 
-          <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5" noValidate>
-            {errorMessage && <Alert>{errorMessage}</Alert>}
-
-            {/* Recipients */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="To" required hint="Recipient email address.">
-                <Input
-                  type="text"
-                  required
-                  placeholder="prospect@company.com"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                />
-              </Field>
-
-              <Field label="Cc" hint="Optional carbon copy.">
-                <Input
-                  type="text"
-                  placeholder="team@company.com"
-                  value={cc}
-                  onChange={(e) => setCc(e.target.value)}
-                />
-              </Field>
-            </div>
-
-            {/* Subject */}
-            <Field label="Subject" required>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="To" required hint="One address, or several separated by commas.">
               <Input
+                ref={firstFieldRef}
                 type="text"
                 required
-                maxLength={998}
-                placeholder="Personal note regarding your outbound flow"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                placeholder="prospect@example.com"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
               />
             </Field>
 
-            {/* Body with live word count & score header */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-medium text-slate-300">
-                  Message Body <span className="text-violet-400">*</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-slate-500">
-                    {wordCount} {wordCount === 1 ? 'word' : 'words'}
-                  </span>
-                  {preview && (
-                    <DeliverabilityBadge score={preview.score} flags={preview.details} />
-                  )}
-                </div>
-              </div>
-              <Textarea
-                required
-                rows={7}
-                placeholder={'Hi {{first_name}},\n\nNoticed you are scaling outbound infrastructure…\n\nBest,\nAlex'}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
+            <Field label="Cc">
+              <Input
+                type="text"
+                placeholder="colleague@example.com"
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
               />
-            </div>
+            </Field>
+          </div>
 
-            {/* Deliverability Warnings preview if any */}
-            {preview && preview.flags.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-              className="rounded-xl bg-[var(--status-sending-bg)] border border-[var(--status-sending-ring)] px-3.5 py-2.5 text-xs text-[var(--status-sending)]"
+          <Field label="Subject" required>
+            <Input
+              type="text"
+              required
+              maxLength={998}
+              placeholder="Quick question about your outbound stack"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </Field>
+
+          <Field label="Body" required>
+            <Textarea
+              required
+              rows={9}
+              placeholder={'Hi there,\n\n…\n\nThanks,\nAva'}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
+          </Field>
+
+          {/* Bonus A — informational, never blocks the send. */}
+          {preview && (
+            <div className="rounded-md border border-line bg-surface-2 px-3.5 py-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13px] text-fg-secondary">Deliverability</span>
+                <span className={`tabular text-[13px] font-medium ${scoreTone}`}>
+                  {preview.score}/100
+                </span>
+              </div>
+
+              {preview.flags.length === 0 ? (
+                <p className="mt-1.5 text-xs text-fg-muted">No issues found.</p>
+              ) : (
+                <>
+                  <ul className="mt-2 space-y-1">
+                    {preview.flags.map((flag) => (
+                      <li key={flag} className="text-xs leading-relaxed text-fg-muted">
+                        {flag}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-fg-muted">
+                    Informational only — this email will still be scheduled.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Send at"
+              required
+              hint={`Local time (${timezone}); converted to UTC on the way out.`}
             >
-              <div className="flex items-center gap-1.5 font-semibold mb-1">
-                  <span aria-hidden="true">!</span>
-                  <span>{preview.flags.length} deliverability suggestion{preview.flags.length > 1 ? 's' : ''}:</span>
-                </div>
-                <ul className="space-y-0.5 opacity-90 pl-4 list-disc">
-                  {preview.flags.map((flag) => (
-                    <li key={flag}>{flag}</li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-
-            {/* Section Divider */}
-            <div className="hairline-gradient-divider my-4" />
-
-            {/* Scheduling Controls */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Send at"
+              <Input
+                type="datetime-local"
                 required
-                hint={`Local time (${timezone}) converted to UTC on send.`}
-              >
-                <Input
-                  type="datetime-local"
-                  required
-                  value={scheduledAtLocal}
-                  onChange={(e) => setScheduledAtLocal(e.target.value)}
-                />
-              </Field>
+                value={scheduledAtLocal}
+                onChange={(e) => setScheduledAtLocal(e.target.value)}
+              />
+            </Field>
 
-              <Field
-                label="Follow-up if unopened"
-                hint="Auto-sends thread reply if tracking pixel unread."
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  max={720}
-                  placeholder="e.g. 48 hours"
-                  value={followUpAfterHours}
-                  onChange={(e) => setFollowUpAfterHours(e.target.value)}
-                />
-              </Field>
-            </div>
+            <Field label="Follow up if unopened" hint="Hours to wait before following up.">
+              <Input
+                type="number"
+                min={1}
+                max={720}
+                placeholder="48"
+                value={followUpAfterHours}
+                onChange={(e) => setFollowUpAfterHours(e.target.value)}
+              />
+            </Field>
+          </div>
 
-            {/* Actions */}
-            <div className="aurora-line my-4" />
-
-            <div className="flex items-center justify-end gap-3 pt-1">
-              <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={mutation.isPending}>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-                Schedule email
-              </Button>
-            </div>
-          </form>
-        </motion.div>
+          <div className="flex items-center justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={mutation.isPending}>
+              Schedule
+            </Button>
+          </div>
+        </form>
       </div>
-    </AnimatePresence>
+    </div>
   );
 }

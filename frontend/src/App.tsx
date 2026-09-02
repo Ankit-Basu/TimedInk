@@ -1,6 +1,7 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './lib/auth';
-import { LoadingState } from './components/ui';
+import { Spinner } from './components/ui';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -8,15 +9,28 @@ import DashboardPage from './pages/DashboardPage';
 /**
  * Gate for authenticated routes.
  *
- * While the stored token is being validated we render a spinner rather than
- * redirecting - otherwise a hard refresh would bounce a signed-in user to the
- * login screen for a frame before bouncing them back.
+ * While the stored token is being validated we hold rather than redirect —
+ * otherwise a hard refresh would bounce a signed-in user to the login screen
+ * for a frame before bouncing them back.
  */
-function RequireAuth({ children }: { children: React.ReactNode }) {
+function RequireAuth({ children }: { children: ReactNode }) {
   const { user, initialising } = useAuth();
+  // Router state, not window.location, so the redirect target stays correct
+  // under a basename or a future memory/hash router.
+  const location = useLocation();
 
-  if (initialising) return <LoadingState label="Restoring your session..." />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (initialising) {
+    return (
+      <div className="flex min-h-full items-center justify-center gap-2.5 text-[13px] text-fg-muted">
+        <Spinner className="h-4 w-4" />
+        Restoring your session…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
 
   return <>{children}</>;
 }
