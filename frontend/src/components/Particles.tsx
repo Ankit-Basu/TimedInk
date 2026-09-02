@@ -98,6 +98,7 @@ interface ParticlesProps {
   cameraDistance?: number;
   disableRotation?: boolean;
   pixelRatio?: number;
+  fpsLimit?: number;
   className?: string;
 }
 
@@ -118,6 +119,7 @@ const Particles = ({
   cameraDistance = 18,
   disableRotation = false,
   pixelRatio,
+  fpsLimit = 36,
   className = '',
 }: ParticlesProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -130,10 +132,12 @@ const Particles = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // Use devicePixelRatio capped at 2 for performance
-    const dpr = pixelRatio ?? Math.min(window.devicePixelRatio || 1, 2);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const narrowScreen = window.matchMedia('(max-width: 720px)').matches;
+    const dpr = pixelRatio ?? Math.min(window.devicePixelRatio || 1, narrowScreen ? 1 : 1.35);
+    const renderEveryMs = 1000 / Math.max(12, Math.min(60, reducedMotion ? 12 : fpsLimit));
 
-    const renderer = new Renderer({ dpr, depth: false, alpha: true, powerPreference: 'high-performance' });
+    const renderer = new Renderer({ dpr, depth: false, alpha: true, powerPreference: 'low-power' });
     const gl = renderer.gl;
     container.appendChild(gl.canvas);
     gl.clearColor(0, 0, 0, 0);
@@ -163,7 +167,7 @@ const Particles = ({
       window.addEventListener('mousemove', handleMouseMove, { passive: true });
     }
 
-    const count = particleCount;
+    const count = reducedMotion ? Math.min(40, particleCount) : narrowScreen ? Math.min(90, particleCount) : particleCount;
     const positions = new Float32Array(count * 3);
     const randoms = new Float32Array(count * 4);
     const colors = new Float32Array(count * 3);
@@ -207,16 +211,19 @@ const Particles = ({
 
     let animationFrameId: number;
     let lastTime = performance.now();
+    let lastRender = 0;
     let elapsed = 0;
 
     const update = (t: number) => {
       animationFrameId = requestAnimationFrame(update);
 
-      // Skip frames if tab is backgrounded
       if (document.hidden) {
         lastTime = t;
         return;
       }
+
+      if (t - lastRender < renderEveryMs) return;
+      lastRender = t;
 
       const delta = Math.min(t - lastTime, 100); // cap max delta to prevent leaps
       lastTime = t;
@@ -261,6 +268,7 @@ const Particles = ({
     cameraDistance,
     disableRotation,
     pixelRatio,
+    fpsLimit,
     colorsKey,
   ]);
 

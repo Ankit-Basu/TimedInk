@@ -29,7 +29,7 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
 
   if (isPending) {
     return (
-      <aside className="elevation-3 p-5">
+      <aside className="glass-panel elevation-3 p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="skeleton-shimmer h-4 w-32 rounded" />
         </div>
@@ -50,13 +50,12 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
   }
 
   return (
-    <aside className="elevation-3 p-5">
-      {/* Header — no icon badge, just text */}
+    <aside className="glass-panel elevation-3 p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
           Sending Mailboxes
         </h2>
-        <span className="text-[10px] uppercase font-mono text-slate-500 font-semibold tracking-wider">
+        <span className="rounded-full border border-[var(--color-aqua)]/25 bg-[var(--color-aqua)]/10 px-2.5 py-1 text-[10px] uppercase font-mono text-[var(--color-aqua)] font-semibold tracking-wider">
           Auto-Rotate
         </span>
       </div>
@@ -106,21 +105,20 @@ function MailboxRow({
   const atCap = used >= limit;
 
   return (
-    <div className="group relative rounded-xl elevation-1 p-3.5 transition-all duration-200 hover:border-white/20">
+    <div className="group sheen-hover relative rounded-xl elevation-1 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/25">
       <div className="flex items-baseline justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold text-slate-200">{mailbox.fromName}</p>
           <p className="truncate text-[11px] text-slate-500 font-mono">{mailbox.fromEmail}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-300 ring-1 ring-violet-500/30">
+        <span className="shrink-0 rounded-full bg-[var(--color-gold)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)] ring-1 ring-[var(--color-gold)]/25">
           day {mailbox.warmupDay}
         </span>
       </div>
 
-      {/* Solid Progress Bar (no gradient) */}
       <div className="mt-3">
         <div
-          className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.06] p-[1px]"
+          className="relative h-2.5 w-full overflow-hidden rounded-full bg-black/25 p-[1px] ring-1 ring-white/10"
           role="progressbar"
           aria-valuenow={used}
           aria-valuemin={0}
@@ -134,7 +132,7 @@ function MailboxRow({
             className={`h-full rounded-full ${
               atCap
                 ? 'bg-[var(--status-failed)]'
-                : 'bg-[#8B5CF6]'
+                : 'bg-gradient-to-r from-[#9f7aea] via-[#55d6be] to-[#f6c76b]'
             }`}
           />
         </div>

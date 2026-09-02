@@ -121,7 +121,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 backdrop-blur-xl p-4 sm:p-6 md:p-10"
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#03050b]/78 backdrop-blur-2xl p-4 sm:p-6 md:p-10"
         role="dialog"
         aria-modal="true"
         aria-labelledby="compose-title"
@@ -134,19 +134,20 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="w-full max-w-2xl elevation-4 overflow-hidden my-auto"
+          className="glass-panel w-full max-w-2xl elevation-4 overflow-hidden my-auto"
         >
-          {/* Header — no gradient icon badge, just inline icon */}
-          <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-4">
+          <div className="flex items-center justify-between border-b border-white/[0.09] px-6 py-4">
             <div className="flex items-center gap-3">
-              <svg className="h-5 w-5 text-violet-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-aqua)]/25 bg-[var(--color-aqua)]/10 text-[var(--color-aqua)] shadow-[0_0_24px_rgba(85,214,190,0.12)]">
+                <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+              </div>
               <div>
                 <h2 id="compose-title" className="text-base font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
                   Compose & Schedule
                 </h2>
-                <p className="text-[11px] text-slate-400">Delivery window guaranteed across restarts</p>
+                <p className="text-[11px] text-slate-400">Delivery window guarded across restarts</p>
               </div>
             </div>
 
@@ -228,10 +229,10 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="rounded-xl bg-[var(--status-sending-bg)] border border-[var(--status-sending-ring)] px-3.5 py-2.5 text-xs text-[var(--status-sending)]"
-              >
-                <div className="flex items-center gap-1.5 font-semibold mb-1">
-                  <span>⚠️</span>
+              className="rounded-xl bg-[var(--status-sending-bg)] border border-[var(--status-sending-ring)] px-3.5 py-2.5 text-xs text-[var(--status-sending)]"
+            >
+              <div className="flex items-center gap-1.5 font-semibold mb-1">
+                  <span aria-hidden="true">!</span>
                   <span>{preview.flags.length} deliverability suggestion{preview.flags.length > 1 ? 's' : ''}:</span>
                 </div>
                 <ul className="space-y-0.5 opacity-90 pl-4 list-disc">
@@ -276,7 +277,9 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.06]">
+            <div className="aurora-line my-4" />
+
+            <div className="flex items-center justify-end gap-3 pt-1">
               <Button type="button" variant="secondary" onClick={onClose}>
                 Cancel
               </Button>

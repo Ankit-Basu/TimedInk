@@ -1,44 +1,40 @@
 @import 'tailwindcss';
 
 /**
- * TimedInk — Premium dark design system v2.
- *
- * Key changes from v1:
- * - Killed gradient buttons — solid violet accent only
- * - Shifted status colors off Tailwind defaults
- * - Added noise/grain overlay for anti-plastic texture
- * - Varied border-radius per elevation level
- * - Added SpotlightCard, StarBorder, and Particles CSS
+ * TimedInk — immersive glass design system.
  */
 @theme {
   /* ── Core Palette ─────────────────────────────────────────────────── */
   --color-ink: #f8fafc;
   --color-ink-secondary: #cbd5e1;
   --color-muted: #64748b;
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-canvas: #070714;
-  --color-brand: #8b5cf6;
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-canvas: #060811;
+  --color-brand: #9f7aea;
+  --color-aqua: #55d6be;
+  --color-coral: #ff7a7a;
+  --color-gold: #f6c76b;
 
   /* ── 4-Level High-Performance Glass Elevation System ────────────── */
-  --glass-1-bg: rgba(255, 255, 255, 0.04);
-  --glass-1-blur: 8px;
-  --glass-1-border: rgba(255, 255, 255, 0.08);
-  --glass-1-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --glass-1-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035));
+  --glass-1-blur: 14px;
+  --glass-1-border: rgba(255, 255, 255, 0.14);
+  --glass-1-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 34px rgba(0, 0, 0, 0.24);
 
-  --glass-2-bg: rgba(14, 14, 26, 0.72);
-  --glass-2-blur: 10px;
-  --glass-2-border: rgba(255, 255, 255, 0.09);
-  --glass-2-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --glass-2-bg: linear-gradient(145deg, rgba(17, 23, 41, 0.72), rgba(9, 11, 22, 0.54));
+  --glass-2-blur: 16px;
+  --glass-2-border: rgba(255, 255, 255, 0.13);
+  --glass-2-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 18px 50px rgba(0, 0, 0, 0.32);
 
-  --glass-3-bg: rgba(14, 14, 26, 0.76);
-  --glass-3-blur: 12px;
-  --glass-3-border: rgba(255, 255, 255, 0.11);
-  --glass-3-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --glass-3-bg: linear-gradient(145deg, rgba(22, 30, 50, 0.76), rgba(8, 10, 20, 0.6));
+  --glass-3-blur: 18px;
+  --glass-3-border: rgba(255, 255, 255, 0.15);
+  --glass-3-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 24px 60px rgba(0, 0, 0, 0.38);
 
-  --glass-4-bg: rgba(12, 12, 22, 0.88);
-  --glass-4-blur: 14px;
-  --glass-4-border: rgba(255, 255, 255, 0.15);
-  --glass-4-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 20px 48px rgba(0, 0, 0, 0.6);
+  --glass-4-bg: linear-gradient(145deg, rgba(20, 24, 43, 0.9), rgba(7, 8, 18, 0.82));
+  --glass-4-blur: 20px;
+  --glass-4-border: rgba(255, 255, 255, 0.18);
+  --glass-4-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 32px 90px rgba(0, 0, 0, 0.62);
 
   /* ── Custom Status Colors (shifted off Tailwind defaults) ────────── */
   --status-sent: #2dd4a0;
@@ -77,7 +73,11 @@ body,
 }
 
 body {
-  background-color: var(--color-canvas);
+  background:
+    radial-gradient(circle at 14% 12%, rgba(85, 214, 190, 0.18), transparent 28rem),
+    radial-gradient(circle at 86% 10%, rgba(159, 122, 234, 0.2), transparent 30rem),
+    radial-gradient(circle at 78% 82%, rgba(255, 122, 122, 0.12), transparent 28rem),
+    var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -91,48 +91,225 @@ body {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.018;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 128px 128px;
   transform: translateZ(0);
 }
 
+.top-nav-wrap {
+  background:
+    linear-gradient(180deg, rgba(6, 8, 17, 0.94), rgba(6, 8, 17, 0.68) 72%, transparent);
+  border-bottom: 0;
+}
+
+.top-nav-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.045)),
+    rgba(8, 11, 22, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 44px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+}
+
+.top-nav-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 50%, rgba(85, 214, 190, 0.16), transparent 14rem),
+    radial-gradient(circle at 82% 20%, rgba(159, 122, 234, 0.18), transparent 16rem);
+}
+
+.top-nav-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.logo-mark {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: white;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)),
+    radial-gradient(circle at 38% 28%, rgba(85, 214, 190, 0.18), transparent 62%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 26px rgba(159, 122, 234, 0.22);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.logo-mark:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 0 34px rgba(85, 214, 190, 0.26);
+}
+
+.logo-wordmark span:last-child {
+  color: transparent;
+  background: linear-gradient(90deg, #b794ff, #55d6be 58%, #f6c76b);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.nav-user-pill {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.nav-icon-button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgb(203, 213, 225);
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.nav-icon-button:hover {
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
 /* ── 4 Elevation Classes (varied border-radius, high-fps) ──────────── */
 .elevation-1 {
-  background-color: var(--glass-1-bg);
+  background: var(--glass-1-bg);
   backdrop-filter: blur(var(--glass-1-blur));
   -webkit-backdrop-filter: blur(var(--glass-1-blur));
   border: 1px solid var(--glass-1-border);
   box-shadow: var(--glass-1-shadow);
-  border-radius: 0.75rem; /* 12px — stat cards, compact items */
+  border-radius: 0.875rem;
 }
 
 .elevation-2 {
-  background-color: var(--glass-2-bg);
+  background: var(--glass-2-bg);
   backdrop-filter: blur(var(--glass-2-blur));
   -webkit-backdrop-filter: blur(var(--glass-2-blur));
   border: 1px solid var(--glass-2-border);
   box-shadow: var(--glass-2-shadow);
-  border-radius: 1rem; /* 16px — table panels */
+  border-radius: 1rem;
 }
 
 .elevation-3 {
-  background-color: var(--glass-3-bg);
+  background: var(--glass-3-bg);
   backdrop-filter: blur(var(--glass-3-blur));
   -webkit-backdrop-filter: blur(var(--glass-3-blur));
   border: 1px solid var(--glass-3-border);
   box-shadow: var(--glass-3-shadow);
-  border-radius: 0.875rem; /* 14px — sidebar panels */
+  border-radius: 1rem;
 }
 
 .elevation-4 {
-  background-color: var(--glass-4-bg);
+  background: var(--glass-4-bg);
   backdrop-filter: blur(var(--glass-4-blur));
   -webkit-backdrop-filter: blur(var(--glass-4-blur));
   border: 1px solid var(--glass-4-border);
   box-shadow: var(--glass-4-shadow);
-  border-radius: 1.25rem; /* 20px — modals */
+  border-radius: 1.25rem;
+}
+
+.immersive-bg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.immersive-bg::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -2;
+  background:
+    linear-gradient(115deg, rgba(85, 214, 190, 0.12), transparent 28%),
+    linear-gradient(245deg, rgba(246, 199, 107, 0.12), transparent 26%),
+    radial-gradient(circle at 24% 38%, rgba(159, 122, 234, 0.22), transparent 28rem),
+    radial-gradient(circle at 78% 18%, rgba(85, 214, 190, 0.15), transparent 30rem),
+    radial-gradient(circle at 62% 82%, rgba(255, 122, 122, 0.13), transparent 32rem);
+  filter: saturate(135%);
+  animation: ambient-drift 20s ease-in-out infinite alternate;
+}
+
+.immersive-bg::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: radial-gradient(circle at 50% 18%, black, transparent 74%);
+}
+
+.glass-panel {
+  position: relative;
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 15% 0%, rgba(85, 214, 190, 0.16), transparent 20rem),
+    radial-gradient(circle at 100% 20%, rgba(159, 122, 234, 0.14), transparent 18rem);
+  opacity: 0.72;
+}
+
+.glass-panel > :not(.absolute) {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-panel > .absolute {
+  position: absolute;
+  z-index: 0;
+}
+
+.aurora-line {
+  background: linear-gradient(90deg, transparent, rgba(85, 214, 190, 0.64), rgba(246, 199, 107, 0.56), rgba(159, 122, 234, 0.62), transparent);
+  height: 1px;
+  opacity: 0.75;
+}
+
+.orbital-ring {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  transform: rotate(-18deg);
+  animation: orbit-breathe 8s ease-in-out infinite;
+}
+
+.sheen-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.sheen-hover::after {
+  content: '';
+  position: absolute;
+  inset: -40% -80%;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.18), transparent 65%);
+  transform: translateX(-55%);
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.sheen-hover:hover::after {
+  transform: translateX(55%);
 }
 
 /* ── SpotlightCard CSS (official ReactBits pattern) ────────────────── */
@@ -140,7 +317,7 @@ body {
   position: relative;
   border-radius: 0.75rem;
   border: 1px solid var(--glass-1-border);
-  background-color: var(--glass-1-bg);
+  background: var(--glass-1-bg);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 24px rgba(0, 0, 0, 0.35);
@@ -209,7 +386,7 @@ body {
 
 .star-border-inner {
   position: relative;
-  background: rgba(139, 92, 246, 1);
+  background: linear-gradient(135deg, rgba(159, 122, 234, 1), rgba(85, 214, 190, 0.92));
   color: white;
   font-size: 0.875rem;
   font-weight: 600;
@@ -224,8 +401,12 @@ body {
   transition: background 0.2s ease;
 }
 
+.star-border-container.w-full .star-border-inner {
+  width: 100%;
+}
+
 .star-border-container:hover .star-border-inner {
-  background: rgba(124, 78, 230, 1);
+  background: linear-gradient(135deg, rgba(174, 141, 255, 1), rgba(95, 225, 203, 0.96));
 }
 
 .star-border-container:active .star-border-inner {
@@ -250,23 +431,23 @@ body {
 
 /* ── Interactive Glass Inputs ──────────────────────────────────────── */
 .interactive-glass {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 28px rgba(0, 0, 0, 0.18);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .interactive-glass:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 16px rgba(139, 92, 246, 0.15);
+  background: rgba(255, 255, 255, 0.095);
+  border-color: rgba(85, 214, 190, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 24px rgba(85, 214, 190, 0.12);
 }
 
 .interactive-glass:focus,
 .interactive-glass:focus-within {
   background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(139, 92, 246, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 20px rgba(139, 92, 246, 0.25);
+  border-color: rgba(159, 122, 234, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 28px rgba(159, 122, 234, 0.22);
   outline: none;
 }
 
@@ -328,6 +509,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .animate-float { animation: float-subtle 4s ease-in-out infinite; }
+
+@keyframes ambient-drift {
+  0% { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  100% { transform: translate3d(1.5%, 1%, 0) scale(1.04); }
+}
+
+@keyframes orbit-breathe {
+  0%, 100% { opacity: 0.24; transform: rotate(-18deg) scale(0.98); }
+  50% { opacity: 0.52; transform: rotate(-18deg) scale(1.04); }
+}
 
 /* ── Reduced Motion ────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

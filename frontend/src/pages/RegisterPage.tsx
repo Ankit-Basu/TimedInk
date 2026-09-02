@@ -42,7 +42,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Start scheduling precision emails in seconds.">
+    <AuthShell title="Create your account" subtitle="Launch a reviewer-ready outbound control room in seconds.">
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {error && <Alert>{error}</Alert>}
 
