@@ -73,19 +73,19 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
   }, [toast.durationMs, onDismiss]);
 
   return (
-    <div className="toast-enter pointer-events-auto flex gap-3 rounded-md border border-line bg-surface-2 p-3">
+    <div className="toast-enter pointer-events-auto flex gap-3 border border-rule-strong bg-surface p-3.5">
       <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${ACCENT[toast.type]}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-fg">{toast.title}</p>
+        <p className="text-[13px] font-medium text-ink">{toast.title}</p>
         {toast.message && (
-          <p className="mt-0.5 text-xs leading-relaxed break-words text-fg-muted">{toast.message}</p>
+          <p className="mt-1 text-xs leading-relaxed break-words text-ink-3">{toast.message}</p>
         )}
       </div>
       <button
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="shrink-0 self-start rounded p-0.5 text-fg-muted transition-colors hover:text-fg"
+        className="shrink-0 self-start rounded-sm p-0.5 text-ink-3 transition-colors hover:text-ink"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />

@@ -36,45 +36,48 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
         change, and the subject cell can ellipsis instead of collapsing into a
         one-word-per-line column when the viewport gets tight.
       */}
-      <table className="w-full min-w-[940px] table-fixed text-left text-[13px]">
+      <table className="w-full min-w-[940px] table-fixed text-left">
         <colgroup>
-          <col className="w-[18%]" />
-          <col className="w-[21%]" />
-          <col className="w-[16%]" />
+          <col className="w-[19%]" />
+          <col className="w-[20%]" />
+          <col className="w-[17%]" />
           <col className="w-[13%]" />
+          <col className="w-[8%]" />
           <col className="w-[10%]" />
-          <col className="w-[9%]" />
-          <col className="w-[13%]" />
+          <col className="w-[11%]" />
         </colgroup>
+
         <thead>
-          <tr className="border-b border-line text-xs font-medium text-fg-muted">
-            <th scope="col" className="px-4 py-2.5 font-medium">Recipient</th>
-            <th scope="col" className="px-4 py-2.5 font-medium">Subject</th>
-            <th scope="col" className="px-4 py-2.5 font-medium">Scheduled</th>
-            <th scope="col" className="px-4 py-2.5 font-medium">From</th>
-            <th scope="col" className="px-4 py-2.5 font-medium">Score</th>
-            <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
-            <th scope="col" className="px-4 py-2.5 text-right font-medium">
+          <tr className="border-b border-rule">
+            <th scope="col" className="label px-6 py-3 font-medium sm:px-8">Recipient</th>
+            <th scope="col" className="label px-4 py-3 font-medium">Subject</th>
+            <th scope="col" className="label px-4 py-3 font-medium">Scheduled</th>
+            <th scope="col" className="label px-4 py-3 font-medium">From</th>
+            <th scope="col" className="label px-4 py-3 font-medium">Score</th>
+            <th scope="col" className="label px-4 py-3 font-medium">Status</th>
+            <th scope="col" className="px-6 py-3 sm:px-8">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
 
-        <tbody className="divide-y divide-line">
+        <tbody className="divide-y divide-rule">
           {emails.map((email) => (
-            <tr key={email.id} className="align-top transition-colors hover:bg-surface-2">
-              <td className="px-4 py-3">
-                <div className="truncate text-fg" title={email.to}>{email.to}</div>
+            <tr key={email.id} className="align-top transition-colors hover:bg-surface-2/70">
+              <td className="overflow-hidden px-6 py-4 sm:px-8">
+                <div className="truncate text-[13px] text-ink" title={email.to}>
+                  {email.to}
+                </div>
                 {email.cc && (
-                  <div className="truncate text-xs text-fg-muted" title={email.cc}>cc {email.cc}</div>
+                  <div className="truncate text-xs text-ink-3" title={email.cc}>
+                    cc {email.cc}
+                  </div>
                 )}
-                {email.followUpOfId && (
-                  <div className="mt-1 text-xs text-fg-muted">follow-up</div>
-                )}
+                {email.followUpOfId && <div className="label mt-1.5">Follow-up</div>}
               </td>
 
-              <td className="px-4 py-3">
-                <div className="truncate text-fg-secondary" title={email.subject}>
+              <td className="overflow-hidden px-4 py-4">
+                <div className="truncate text-[13px] text-ink-2" title={email.subject}>
                   {email.subject}
                 </div>
                 {email.lastError && (
@@ -83,15 +86,15 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
                   </div>
                 )}
                 {email.attempts > 1 && (
-                  <div className="tabular mt-1 text-xs text-fg-muted">
-                    {email.attempts} attempts
-                  </div>
+                  <div className="mono mt-1 text-xs text-ink-3">{email.attempts} attempts</div>
                 )}
               </td>
 
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div className="tabular text-fg-secondary">{formatDateTime(email.scheduledAt)}</div>
-                <div className="mt-0.5 text-xs text-fg-muted">
+              <td className="overflow-hidden px-4 py-4">
+                <div className="mono truncate text-[13px] text-ink-2">
+                  {formatDateTime(email.scheduledAt)}
+                </div>
+                <div className="truncate text-xs text-ink-3">
                   {formatRelative(email.scheduledAt)}
                   {/* Only worth showing when it differs from the viewer's zone. */}
                   {email.timezone && email.timezone !== localZone && (
@@ -100,57 +103,54 @@ export default function EmailTable({ emails }: { emails: ScheduledEmail[] }) {
                 </div>
               </td>
 
-              <td className="px-4 py-3 text-fg-secondary">
+              <td className="overflow-hidden px-4 py-4 text-[13px] text-ink-2">
                 {email.mailbox ? (
                   <span className="block truncate" title={email.mailbox.fromEmail}>
                     {email.mailbox.fromEmail}
                   </span>
                 ) : (
-                  <span className="text-fg-muted">—</span>
+                  <span className="text-ink-3">—</span>
                 )}
               </td>
 
-              <td className="px-4 py-3 whitespace-nowrap">
+              <td className="px-4 py-4 whitespace-nowrap">
                 <DeliverabilityBadge
                   score={email.deliverabilityScore}
                   flags={email.deliverabilityFlags}
                 />
               </td>
 
-              <td className="px-4 py-3 whitespace-nowrap">
+              <td className="px-4 py-4 whitespace-nowrap">
                 <StatusBadge status={email.status} />
                 {email.openedAt && (
-                  <div className="mt-0.5 text-xs text-fg-muted">
+                  <div className="mt-1 text-xs text-ink-3">
                     opened {formatRelative(email.openedAt)}
                   </div>
                 )}
               </td>
 
-              <td className="px-4 py-3 text-right whitespace-nowrap">
-                <div className="flex items-center justify-end gap-1.5">
-                  {email.previewUrl && (
-                    <a
-                      href={email.previewUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="inline-flex h-7 items-center rounded-md border border-line px-2.5 text-xs
-                        text-fg-secondary transition-colors hover:border-line-strong hover:text-fg"
-                    >
-                      Preview
-                    </a>
-                  )}
+              <td className="px-6 py-4 text-right whitespace-nowrap sm:px-8">
+                {email.previewUrl && (
+                  <a
+                    href={email.previewUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-[13px] text-ink underline decoration-rule-strong underline-offset-4 transition-colors hover:decoration-ink"
+                  >
+                    Preview ↗
+                  </a>
+                )}
 
-                  {CANCELLABLE.has(email.status) && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      loading={cancel.isPending && cancel.variables === email.id}
-                      onClick={() => cancel.mutate(email.id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
+                {CANCELLABLE.has(email.status) && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    loading={cancel.isPending && cancel.variables === email.id}
+                    onClick={() => cancel.mutate(email.id)}
+                  >
+                    Cancel
+                  </Button>
+                )}
               </td>
             </tr>
           ))}

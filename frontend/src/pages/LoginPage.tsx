@@ -43,8 +43,19 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell subtitle="Sign in to schedule and track your outbound email.">
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <AuthShell
+      eyebrow="Sign in"
+      headline={
+        <>
+          Write it now.
+          <br />
+          <span className="text-ink-3 italic">Send it</span> exactly when
+          <br />
+          you meant to.
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-7" noValidate>
         {error && <Alert>{error}</Alert>}
 
         <Field label="Email" required>
@@ -74,31 +85,57 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-5 text-[13px] text-fg-muted">
+      <p className="mt-8 text-[13px] text-ink-2">
         No account?{' '}
-        <Link to="/register" className="text-accent hover:underline">
+        <Link to="/register" className="text-ink underline decoration-rule-strong underline-offset-4 hover:decoration-ink">
           Create one
         </Link>
       </p>
 
-      <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-fg-muted">
+      <p className="mt-8 border-t border-rule pt-5 text-xs leading-relaxed text-ink-3">
         Pre-filled with the seeded demo account. Run{' '}
-        <code className="font-mono text-fg-secondary">npm run seed</code> in the backend first.
+        <code className="mono text-ink-2">npm run seed</code> in the backend first.
       </p>
     </AuthShell>
   );
 }
 
-export function AuthShell({ subtitle, children }: { subtitle: string; children: ReactNode }) {
+/**
+ * Two-column editorial split: the argument on the left, the form on the right.
+ * Below `lg` it stacks and the display column shrinks to just the wordmark.
+ */
+export function AuthShell({
+  eyebrow,
+  headline,
+  children,
+}: {
+  eyebrow: string;
+  headline: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex min-h-full items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-6">
-          <Logo size={22} />
-          <p className="mt-2 text-[13px] text-fg-muted">{subtitle}</p>
+    <div className="min-h-full p-3 sm:p-5">
+      <div className="frame grid min-h-[calc(100vh-1.5rem)] grid-cols-1 sm:min-h-[calc(100vh-2.5rem)] lg:grid-cols-2">
+        {/* Display column */}
+        <div className="flex flex-col justify-between gap-12 border-b border-rule p-8 sm:p-12 lg:border-r lg:border-b-0">
+          <Logo />
+
+          <h1 className="display max-w-xl text-[2.75rem] leading-[1.05] sm:text-6xl">{headline}</h1>
+
+          <div className="label hidden gap-6 lg:flex">
+            <span>Scheduled send</span>
+            <span>Warmup limits</span>
+            <span>Open tracking</span>
+          </div>
         </div>
 
-        <div className="rounded-lg border border-line bg-surface p-6">{children}</div>
+        {/* Form column */}
+        <div className="flex items-center justify-center p-8 sm:p-12">
+          <div className="w-full max-w-sm">
+            <p className="label mb-8">{eyebrow}</p>
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

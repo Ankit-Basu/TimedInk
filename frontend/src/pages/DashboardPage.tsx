@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Button, EmptyState, ErrorState, LoadingState, Panel } from '../components/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import EmailTable from '../features/emails/EmailTable';
 import ComposeModal from '../features/emails/ComposeModal';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
@@ -117,18 +117,20 @@ export default function DashboardPage() {
 
   const pagination = emailsQuery.data?.pagination;
   const rows = emailsQuery.data?.data ?? [];
+  const total = statsQuery.data?.total ?? null;
 
   return (
-    <div className="min-h-full">
-      <header className="sticky top-0 z-20 border-b border-line bg-bg">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-6">
+    <div className="min-h-full p-3 sm:p-5">
+      <div className="frame min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-2.5rem)]">
+        {/* --- masthead ---------------------------------------------------- */}
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-rule px-6 py-4 sm:px-8">
           <Logo />
 
-          <div className="flex items-center gap-2">
-            <span className="hidden text-[13px] text-fg-muted sm:inline">{user?.email}</span>
+          <div className="flex items-center gap-3">
+            <span className="label hidden sm:inline">{user?.email}</span>
             <Button onClick={() => setComposeOpen(true)}>
               New email
-              <kbd className="ml-0.5 hidden rounded border border-white/25 px-1 text-[10px] font-normal text-white/70 sm:inline">
+              <kbd className="mono ml-1 hidden rounded-sm border border-ink/25 px-1 text-[10px] font-normal sm:inline">
                 c
               </kbd>
             </Button>
@@ -136,121 +138,148 @@ export default function DashboardPage() {
               Sign out
             </Button>
           </div>
+        </header>
+
+        {/* --- title block -------------------------------------------------- */}
+        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-rule px-6 py-8 sm:px-8">
+          <div>
+            <p className="label mb-3">The queue</p>
+            <h1 className="display text-4xl sm:text-5xl">
+              Everything you&apos;ve scheduled,
+              <br />
+              <span className="text-ink-3 italic">and where it got to.</span>
+            </h1>
+          </div>
+
+          <dl className="flex gap-8">
+            <div>
+              <dt className="label">Total</dt>
+              <dd className="mono mt-1.5 text-2xl">{total ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="label">Refresh</dt>
+              <dd className="mono mt-1.5 text-2xl">{Math.round(POLL_INTERVAL_MS / 1000)}s</dd>
+            </div>
+          </dl>
         </div>
-      </header>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <section className="min-w-0">
-            <Panel className="overflow-hidden">
-              <nav
-                className="flex items-center gap-1 overflow-x-auto border-b border-line px-2"
-                aria-label="Filter by status"
-              >
-                {TABS.map((tab) => {
-                  const active = tab.id === activeTab.id;
-                  const count = countFor(tab);
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      aria-current={active ? 'page' : undefined}
-                      onClick={() => {
-                        setActiveTabId(tab.id);
-                        setPage(1);
-                      }}
-                      className={`-mb-px shrink-0 border-b-2 px-3 py-2.5 text-[13px] transition-colors ${
-                        active
-                          ? 'border-accent font-medium text-fg'
-                          : 'border-transparent text-fg-secondary hover:text-fg'
-                      }`}
-                    >
-                      {tab.label}
+        {/* --- body --------------------------------------------------------- */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19rem]">
+          <section className="min-w-0 border-b border-rule lg:border-r lg:border-b-0">
+            {/* Grid nav: evenly divided, ruled, with a filled marker on the active tab. */}
+            <nav
+              className="grid grid-cols-2 border-b border-rule sm:grid-cols-4"
+              aria-label="Filter by status"
+            >
+              {TABS.map((tab, i) => {
+                const active = tab.id === activeTab.id;
+                const count = countFor(tab);
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => {
+                      setActiveTabId(tab.id);
+                      setPage(1);
+                    }}
+                    className={`group flex items-baseline justify-between gap-2 px-5 py-3.5 text-left transition-colors
+                      ${i > 0 ? 'border-l border-rule' : ''}
+                      ${active ? 'bg-surface-2' : 'hover:bg-surface-2/60'}`}
+                  >
+                    <span className="flex items-baseline gap-2">
                       <span
-                        className={`tabular ml-2 rounded px-1.5 py-0.5 text-[11px] ${
-                          active ? 'bg-accent-quiet text-accent' : 'bg-surface-2 text-fg-muted'
+                        className={`h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full transition-colors ${
+                          active ? 'bg-accent' : 'bg-transparent'
                         }`}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className={`text-[13px] ${active ? 'font-medium text-ink' : 'text-ink-2'}`}
                       >
-                        {count ?? '–'}
+                        {tab.label}
                       </span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {emailsQuery.isPending ? (
-                <LoadingState />
-              ) : emailsQuery.isError ? (
-                <ErrorState error={emailsQuery.error} onRetry={() => void emailsQuery.refetch()} />
-              ) : rows.length === 0 ? (
-                <EmptyState
-                  title={activeTab.empty.title}
-                  description={activeTab.empty.description}
-                  action={
-                    activeTab.id === 'scheduled' ? (
-                      <Button size="sm" onClick={() => setComposeOpen(true)}>
-                        Schedule an email
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              ) : (
-                <>
-                  <EmailTable emails={rows} />
-
-                  <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-2.5">
-                    <span className="tabular text-xs text-fg-muted">
-                      {pagination
-                        ? `${(pagination.page - 1) * pagination.pageSize + 1}–${
-                            (pagination.page - 1) * pagination.pageSize + rows.length
-                          } of ${pagination.total}`
-                        : ''}
                     </span>
+                    <span className={`mono text-xs ${active ? 'text-ink' : 'text-ink-3'}`}>
+                      {count ?? '–'}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
 
-                    {pagination && pagination.totalPages > 1 && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={pagination.page <= 1}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        >
-                          Previous
-                        </Button>
-                        <span className="tabular text-xs text-fg-muted">
-                          {pagination.page} / {pagination.totalPages}
-                        </span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={pagination.page >= pagination.totalPages}
-                          onClick={() => setPage((p) => p + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </Panel>
+            {emailsQuery.isPending ? (
+              <LoadingState />
+            ) : emailsQuery.isError ? (
+              <ErrorState error={emailsQuery.error} onRetry={() => void emailsQuery.refetch()} />
+            ) : rows.length === 0 ? (
+              <EmptyState
+                title={activeTab.empty.title}
+                description={activeTab.empty.description}
+                action={
+                  activeTab.id === 'scheduled' ? (
+                    <Button onClick={() => setComposeOpen(true)}>Schedule an email</Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <>
+                <EmailTable emails={rows} />
 
-            <p className="mt-2.5 flex items-center gap-1.5 text-xs text-fg-muted">
+                <div className="flex items-center justify-between gap-4 border-t border-rule px-6 py-3.5 sm:px-8">
+                  <span className="label">
+                    {pagination
+                      ? `${(pagination.page - 1) * pagination.pageSize + 1}–${
+                          (pagination.page - 1) * pagination.pageSize + rows.length
+                        } of ${pagination.total}`
+                      : ''}
+                  </span>
+
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={pagination.page <= 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      >
+                        Previous
+                      </Button>
+                      <span className="mono text-xs text-ink-3">
+                        {pagination.page} / {pagination.totalPages}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={pagination.page >= pagination.totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center gap-2 px-6 py-3 sm:px-8">
               <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  emailsQuery.isFetching ? 'bg-st-sent' : 'bg-line-strong'
+                className={`h-1 w-1 rounded-full ${
+                  emailsQuery.isFetching ? 'bg-accent' : 'bg-rule-strong'
                 }`}
                 aria-hidden="true"
               />
-              {emailsQuery.isFetching
-                ? 'Refreshing…'
-                : `Auto-refreshes every ${Math.round(POLL_INTERVAL_MS / 1000)}s`}
-            </p>
+              <span className="label">
+                {emailsQuery.isFetching
+                  ? 'Refreshing'
+                  : `Auto-refreshes every ${Math.round(POLL_INTERVAL_MS / 1000)}s`}
+              </span>
+            </div>
           </section>
 
           <MailboxPanel pollIntervalMs={POLL_INTERVAL_MS} />
         </div>
-      </main>
+      </div>
 
       <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} />
     </div>

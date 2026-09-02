@@ -21,7 +21,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   if (initialising) {
     return (
-      <div className="flex min-h-full items-center justify-center gap-2.5 text-[13px] text-fg-muted">
+      <div className="flex min-h-full items-center justify-center gap-2.5 text-[13px] text-ink-3">
         <Spinner className="h-4 w-4" />
         Restoring your session…
       </div>

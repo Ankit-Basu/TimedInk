@@ -28,15 +28,29 @@ export function datetimeLocalValue(minutesFromNow = 0): string {
   return local.toISOString().slice(0, 16);
 }
 
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
+const pad = (n: number): string => String(n).padStart(2, '0');
 
+/**
+ * Compact local timestamp: `2026-08-31 02:40`.
+ *
+ * Deliberately ISO-shaped rather than "Aug 31, 2026, 2:40 AM". It is five
+ * characters shorter (which matters in a fixed-width monospace column), it
+ * sorts the way it reads, and 24h time removes the AM/PM ambiguity that bites
+ * people scheduling near midnight. The human-friendly "3 days ago" sits
+ * underneath it in the table.
+ *
+ * Rendered in the viewer's local zone; the row shows the composing zone
+ * alongside whenever the two differ.
+ */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : dateTimeFormatter.format(d);
+  if (Number.isNaN(d.getTime())) return '—';
+
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
 }
 
 /** "in 4 min" / "2 h ago" — cheap relative time without a date library. */

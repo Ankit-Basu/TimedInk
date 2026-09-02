@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
-import { Button, Panel } from '../../components/ui';
+import { Button } from '../../components/ui';
 import type { Mailbox } from '../../lib/types';
 
 /**
@@ -35,32 +35,34 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
   });
 
   return (
-    <Panel className="h-fit p-4">
-      <h2 className="text-[13px] font-medium text-fg">Sending mailboxes</h2>
-      <p className="mt-1 text-xs leading-relaxed text-fg-muted">
-        New emails rotate across these round-robin. Each has a warmup-driven daily cap.
-      </p>
+    <aside>
+      <div className="border-b border-rule px-6 py-4">
+        <h2 className="label">Sending mailboxes</h2>
+        <p className="mt-3 text-xs leading-relaxed text-ink-3">
+          New emails rotate across these round-robin. Each has a warmup-driven daily cap.
+        </p>
+      </div>
 
       {isPending ? (
-        <div className="mt-4 space-y-4" role="status" aria-label="Loading mailboxes">
+        <div className="space-y-5 px-6 py-5" role="status" aria-label="Loading mailboxes">
           {[0, 1].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="skeleton h-3.5 w-32" />
-              <div className="skeleton h-1.5 w-full" />
+            <div key={i} className="space-y-2.5">
+              <div className="skeleton h-3 w-36" />
+              <div className="skeleton h-px w-full" />
             </div>
           ))}
         </div>
       ) : isError ? (
-        <p className="mt-4 text-xs text-danger" role="alert">
+        <p className="px-6 py-5 text-xs text-danger" role="alert">
           Could not load mailboxes.
         </p>
       ) : mailboxes.length === 0 ? (
-        <p className="mt-4 text-xs leading-relaxed text-fg-muted">
-          No mailboxes yet — run <code className="font-mono">npm run seed</code> in the backend to
-          create two.
+        <p className="px-6 py-5 text-xs leading-relaxed text-ink-3">
+          No mailboxes yet — run <code className="mono text-ink-2">npm run seed</code> in the
+          backend to create two.
         </p>
       ) : (
-        <ul className="mt-4 space-y-4">
+        <ul className="divide-y divide-rule">
           {mailboxes.map((mailbox) => (
             <MailboxRow
               key={mailbox.id}
@@ -71,7 +73,7 @@ export default function MailboxPanel({ pollIntervalMs }: { pollIntervalMs: numbe
           ))}
         </ul>
       )}
-    </Panel>
+    </aside>
   );
 }
 
@@ -90,16 +92,17 @@ function MailboxRow({
   const atCap = used >= limit;
 
   return (
-    <li className="border-t border-line pt-4 first:border-0 first:pt-0">
+    <li className="px-6 py-5">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="truncate text-[13px] text-fg" title={mailbox.fromEmail}>
+        <p className="truncate text-[13px] text-ink" title={mailbox.fromEmail}>
           {mailbox.fromEmail}
         </p>
-        <span className="tabular shrink-0 text-xs text-fg-muted">day {mailbox.warmupDay}</span>
+        <span className="label shrink-0">Day {mailbox.warmupDay}</span>
       </div>
 
+      {/* A rule that fills, rather than a pill — same language as the score bar. */}
       <div
-        className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-3"
+        className="mt-3.5 h-px w-full bg-rule"
         role="progressbar"
         aria-valuenow={used}
         aria-valuemin={0}
@@ -107,13 +110,13 @@ function MailboxRow({
         aria-label={`${mailbox.fromEmail} daily send allowance`}
       >
         <div
-          className={`h-full transition-[width] duration-300 ${atCap ? 'bg-st-failed' : 'bg-accent'}`}
+          className={`h-px transition-[width] duration-500 ${atCap ? 'bg-st-failed' : 'bg-accent'}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span className={`tabular text-xs ${atCap ? 'text-st-failed' : 'text-fg-muted'}`}>
+      <div className="mt-2.5 flex items-center justify-between gap-2">
+        <span className={`mono text-xs ${atCap ? 'text-st-failed' : 'text-ink-3'}`}>
           {used}/{limit} today
           {atCap && ' · at cap'}
         </span>

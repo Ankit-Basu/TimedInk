@@ -122,7 +122,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-40 overflow-y-auto bg-black/60 p-4 sm:p-8"
+      className="fixed inset-0 z-40 overflow-y-auto bg-ink/25 p-4 sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="compose-title"
@@ -131,16 +131,16 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto w-full max-w-2xl rounded-lg border border-line bg-surface">
-        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 id="compose-title" className="text-sm font-medium text-fg">
+      <div className="mx-auto w-full max-w-2xl border border-rule-strong bg-surface">
+        <div className="flex items-center justify-between border-b border-rule px-6 py-4">
+          <h2 id="compose-title" className="display text-xl">
             Schedule an email
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded p-1 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            className="rounded-sm p-1 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink"
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -148,10 +148,10 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-7 px-6 py-7" noValidate>
           {errorMessage && <Alert>{errorMessage}</Alert>}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-7 sm:grid-cols-2">
             <Field label="To" required hint="One address, or several separated by commas.">
               <Input
                 ref={firstFieldRef}
@@ -196,26 +196,26 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
 
           {/* Bonus A — informational, never blocks the send. */}
           {preview && (
-            <div className="rounded-md border border-line bg-surface-2 px-3.5 py-3">
+            <div className="border-l-2 border-rule-strong bg-surface-2 py-3.5 pl-4">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[13px] text-fg-secondary">Deliverability</span>
-                <span className={`tabular text-[13px] font-medium ${scoreTone}`}>
+                <span className="label">Deliverability</span>
+                <span className={`mono text-[13px] font-medium ${scoreTone}`}>
                   {preview.score}/100
                 </span>
               </div>
 
               {preview.flags.length === 0 ? (
-                <p className="mt-1.5 text-xs text-fg-muted">No issues found.</p>
+                <p className="mt-2 text-xs text-ink-3">No issues found.</p>
               ) : (
                 <>
                   <ul className="mt-2 space-y-1">
                     {preview.flags.map((flag) => (
-                      <li key={flag} className="text-xs leading-relaxed text-fg-muted">
+                      <li key={flag} className="text-xs leading-relaxed text-ink-2">
                         {flag}
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-xs text-fg-muted">
+                  <p className="mt-3 text-xs text-ink-3">
                     Informational only — this email will still be scheduled.
                   </p>
                 </>
@@ -223,7 +223,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-7 sm:grid-cols-2">
             <Field
               label="Send at"
               required
@@ -249,7 +249,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
             </Field>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-line pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-rule pt-6">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>

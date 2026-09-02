@@ -42,8 +42,19 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell subtitle="Create an account to get started.">
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <AuthShell
+      eyebrow="Create account"
+      headline={
+        <>
+          Every email,
+          <br />
+          <span className="text-ink-3 italic">out the door</span>
+          <br />
+          on time.
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-7" noValidate>
         {error && <Alert>{error}</Alert>}
 
         <Field label="Name" required>
@@ -89,9 +100,12 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-5 text-[13px] text-fg-muted">
+      <p className="mt-8 text-[13px] text-ink-2">
         Already registered?{' '}
-        <Link to="/login" className="text-accent hover:underline">
+        <Link
+          to="/login"
+          className="text-ink underline decoration-rule-strong underline-offset-4 hover:decoration-ink"
+        >
           Sign in
         </Link>
       </p>
