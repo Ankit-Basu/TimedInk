@@ -99,3 +99,28 @@ export async function getQuotaUsage(
   const raw = await client.get(quotaKey(mailboxId, now));
   return raw ? Number.parseInt(raw, 10) : 0;
 }
+
+/**
+ * Today's usage for several mailboxes in ONE round trip.
+ *
+ * The dashboard polls the mailbox list every few seconds, so reading these
+ * one key at a time costs a round trip per mailbox on every poll. `MGET`
+ * makes that a single call regardless of how many mailboxes a user has.
+ */
+export async function getQuotaUsageMany(
+  mailboxIds: string[],
+  client: Redis = redis,
+  now: Date = new Date(),
+): Promise<Map<string, number>> {
+  const usage = new Map<string, number>();
+  if (mailboxIds.length === 0) return usage;
+
+  const values = await client.mget(...mailboxIds.map((id) => quotaKey(id, now)));
+
+  mailboxIds.forEach((id, index) => {
+    const raw = values[index];
+    usage.set(id, raw ? Number.parseInt(raw, 10) : 0);
+  });
+
+  return usage;
+}

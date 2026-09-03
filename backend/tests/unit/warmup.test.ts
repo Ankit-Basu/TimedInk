@@ -6,6 +6,7 @@ import {
   dailyLimitForWarmupDay,
   effectiveDailyLimit,
   getQuotaUsage,
+  getQuotaUsageMany,
   quotaKey,
   refundMailboxQuota,
 } from '../../src/services/warmup.js';
@@ -163,5 +164,34 @@ describe('getQuotaUsage', () => {
   it('reports zero for a mailbox that has not sent today', async () => {
     const redis = new FakeRedis();
     expect(await getQuotaUsage('never-used', redis.asRedis())).toBe(0);
+  });
+});
+
+describe('getQuotaUsageMany', () => {
+  it('reads every mailbox in a single round trip', async () => {
+    const redis = new FakeRedis();
+    const now = new Date('2026-03-14T10:00:00.000Z');
+
+    await consumeMailboxQuota('mbx-a', 5, redis.asRedis(), now);
+    await consumeMailboxQuota('mbx-a', 5, redis.asRedis(), now);
+    await consumeMailboxQuota('mbx-b', 5, redis.asRedis(), now);
+
+    const before = redis.calls.filter((c) => c.startsWith('MGET')).length;
+    const usage = await getQuotaUsageMany(['mbx-a', 'mbx-b', 'mbx-c'], redis.asRedis(), now);
+    const after = redis.calls.filter((c) => c.startsWith('MGET')).length;
+
+    expect(after - before).toBe(1);
+    expect(usage.get('mbx-a')).toBe(2);
+    expect(usage.get('mbx-b')).toBe(1);
+    // Never sent today — must report 0, not undefined.
+    expect(usage.get('mbx-c')).toBe(0);
+  });
+
+  it('makes no call at all for an empty list', async () => {
+    const redis = new FakeRedis();
+    const usage = await getQuotaUsageMany([], redis.asRedis());
+
+    expect(usage.size).toBe(0);
+    expect(redis.calls).toHaveLength(0);
   });
 });

@@ -42,6 +42,14 @@ export class FakeRedis {
     return value === undefined ? null : String(value);
   }
 
+  async mget(...keys: string[]): Promise<(string | null)[]> {
+    this.calls.push(`MGET ${keys.length}`);
+    return keys.map((k) => {
+      const value = this.store.get(k);
+      return value === undefined ? null : String(value);
+    });
+  }
+
   async set(key: string, value: string): Promise<'OK'> {
     this.store.set(key, Number(value));
     return 'OK';

@@ -10,6 +10,7 @@ import {
   WARMUP_CEILING,
   dailyLimitForWarmupDay,
   getQuotaUsage,
+  getQuotaUsageMany,
 } from '../services/warmup.js';
 import { childLogger } from '../lib/logger.js';
 
@@ -41,9 +42,9 @@ mailboxesRouter.get(
       orderBy: { createdAt: 'asc' },
     });
 
-    const dtos = await Promise.all(
-      mailboxes.map(async (mailbox) => toMailboxDto(mailbox, await getQuotaUsage(mailbox.id))),
-    );
+    // One MGET rather than a round trip per mailbox — this list is polled.
+    const usage = await getQuotaUsageMany(mailboxes.map((m) => m.id));
+    const dtos = mailboxes.map((mailbox) => toMailboxDto(mailbox, usage.get(mailbox.id) ?? 0));
 
     res.json({ data: dtos });
   }),
