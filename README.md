@@ -267,9 +267,18 @@ Brevo (`smtp-relay.brevo.com:587`, 300/day free) and Resend (`smtp.resend.com:58
 `resend`, password = API key) work the same way.
 
 **One gotcha:** the `From` header comes from the `Mailbox` row, and providers only let you send
-from an address you have verified — Gmail silently rewrites a mismatched `From` to the
-authenticated account. Update the seeded mailboxes to an address you own first, via
-`POST /api/mailboxes` or `npx prisma studio → mailboxes → fromEmail`.
+from an address you have verified — Gmail rewrites a mismatched `From` to the authenticated
+account. Point the seeded mailboxes at an address you own:
+
+```bash
+SEED_MAILBOX_A_EMAIL=you@gmail.com
+SEED_MAILBOX_B_EMAIL=you@gmail.com
+```
+
+then `npm run seed` again. (Or edit them live via `POST /api/mailboxes` / `npx prisma studio`.)
+
+Verified working against Gmail: auth in ~2.1s, `delivery: "real"` in the boot log, message
+delivered to a live inbox.
 
 ---
 
@@ -519,6 +528,7 @@ ramp is demonstrable without waiting real days.
 | Mailbox panel (warmup, rotation) | [`MailboxPanel.tsx`](frontend/src/features/mailboxes/MailboxPanel.tsx) |
 | Typed API client | [`lib/api.ts`](frontend/src/lib/api.ts) |
 | Design system / shared UI | [`index.css`](frontend/src/index.css) · [`components/ui.tsx`](frontend/src/components/ui.tsx) |
+| Outgoing email template | [`emailTemplate.ts`](backend/src/lib/emailTemplate.ts) |
 | Accessibility plumbing | [`lib/useFocusTrap.ts`](frontend/src/lib/useFocusTrap.ts) · [`lib/useDocumentTitle.ts`](frontend/src/lib/useDocumentTitle.ts) · [`components/ErrorBoundary.tsx`](frontend/src/components/ErrorBoundary.tsx) |
 
 ---
@@ -592,6 +602,11 @@ Details worth calling out:
 - **Failure containment.** A render-time throw hits an error boundary that keeps the page usable
   and points out that the queue is unaffected, rather than white-screening.
 - **Keyboard.** `c` opens the composer, `Esc` closes either overlay.
+- **The email itself** is themed to match: paper ground, a ruled 600px card, the serif wordmark,
+  and one amber hairline. Table-based with inline styles only and no web fonts — Georgia and the
+  system sans stack stand in for Instrument Serif and Inter — because email clients are a decade
+  behind browsers. Deliberately light-touch: a heavily branded wrapper on cold outreach reads as
+  bulk mail. See [`emailTemplate.ts`](backend/src/lib/emailTemplate.ts).
 - **Filtering.** A debounced search over recipient and subject, backed by the API's `?q=`.
 - **Caching.** The build splits vendor (83KB gzip, changes on dependency bumps) from app
   code (13KB gzip, changes constantly), so a redeploy only invalidates the small chunk.

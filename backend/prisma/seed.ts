@@ -8,8 +8,11 @@
  * Deliberately does NOT import the queue module, so seeding works with Redis
  * down and never opens a connection it then has to clean up.
  */
+import { config as loadDotenv } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+
+loadDotenv({ quiet: true });
 
 const prisma = new PrismaClient();
 
@@ -27,10 +30,25 @@ interface MailboxSeed {
 /**
  * Two mailboxes so mailbox rotation (bonus C) is observable, on different
  * warmup days so the ramp (bonus B) is visible without waiting.
+ *
+ * The addresses are env-overridable because real SMTP providers only send from
+ * an address you have verified. Pointing SMTP_HOST at Gmail or Brevo means
+ * setting SEED_MAILBOX_A_EMAIL / _B_EMAIL to an address you actually own —
+ * otherwise the provider rejects or silently rewrites the From header.
  */
 const MAILBOXES: MailboxSeed[] = [
-  { fromName: 'Ava from TimedInk', fromEmail: 'ava@timedink.dev', warmupDay: 3, dailyLimit: 100 },
-  { fromName: 'Ben from TimedInk', fromEmail: 'ben@timedink.dev', warmupDay: 1, dailyLimit: 100 },
+  {
+    fromName: process.env.SEED_MAILBOX_A_NAME ?? 'Ava from TimedInk',
+    fromEmail: process.env.SEED_MAILBOX_A_EMAIL ?? 'ava@timedink.dev',
+    warmupDay: 3,
+    dailyLimit: 100,
+  },
+  {
+    fromName: process.env.SEED_MAILBOX_B_NAME ?? 'Ben from TimedInk',
+    fromEmail: process.env.SEED_MAILBOX_B_EMAIL ?? 'ben@timedink.dev',
+    warmupDay: 1,
+    dailyLimit: 100,
+  },
 ];
 
 async function main(): Promise<void> {
