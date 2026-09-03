@@ -9,6 +9,7 @@ import EmailDetailDrawer from '../features/emails/EmailDetailDrawer';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
 import Logo from '../components/Logo';
 import { useDocumentTitle } from '../lib/useDocumentTitle';
+import { useDebounced } from '../lib/useDebounced';
 import type { EmailStatus } from '../lib/types';
 
 /**
@@ -78,14 +79,24 @@ export default function DashboardPage() {
   const [page, setPage] = useState(1);
   const [composeOpen, setComposeOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  // Only the settled value reaches the query key, so typing does not fire a
+  // request per keystroke.
+  const debouncedSearch = useDebounced(search.trim(), 300);
 
   const activeTab = TABS.find((t) => t.id === activeTabId) ?? TABS[0]!;
 
   useDocumentTitle(activeTab.label);
 
   const emailsQuery = useQuery({
-    queryKey: ['emails', activeTab.id, page],
-    queryFn: () => api.listEmails({ status: activeTab.statuses, page, pageSize: PAGE_SIZE }),
+    queryKey: ['emails', activeTab.id, page, debouncedSearch],
+    queryFn: () =>
+      api.listEmails({
+        status: activeTab.statuses,
+        page,
+        pageSize: PAGE_SIZE,
+        ...(debouncedSearch ? { q: debouncedSearch } : {}),
+      }),
     refetchInterval: POLL_INTERVAL_MS,
     // Keep the current page on screen while the next loads, so the table does
     // not blank out on every poll.
@@ -119,6 +130,11 @@ export default function DashboardPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // A new search must not land the user on page 4 of the previous result set.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const pagination = emailsQuery.data?.pagination;
   const rows = emailsQuery.data?.data ?? [];
@@ -223,16 +239,55 @@ export default function DashboardPage() {
                 })}
               </nav>
 
+              {/* Free-text filter over recipient and subject (API: ?q=). */}
+              <div className="flex items-center gap-3 border-b border-rule px-6 py-2.5 sm:px-8">
+                <svg
+                  className="h-3.5 w-3.5 shrink-0 text-ink-3"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M13.5 13.5 17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Filter by recipient or subject"
+                  aria-label="Filter emails by recipient or subject"
+                  className="w-full border-0 bg-transparent p-0 text-[13px] text-ink placeholder:text-ink-3
+                    focus:outline-none focus-visible:outline-none"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="label shrink-0 transition-colors hover:text-ink"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
               {emailsQuery.isPending ? (
                 <LoadingState />
               ) : emailsQuery.isError ? (
                 <ErrorState error={emailsQuery.error} onRetry={() => void emailsQuery.refetch()} />
               ) : rows.length === 0 ? (
                 <EmptyState
-                  title={activeTab.empty.title}
-                  description={activeTab.empty.description}
+                  title={debouncedSearch ? 'No matches' : activeTab.empty.title}
+                  description={
+                    debouncedSearch
+                      ? `Nothing in ${activeTab.label.toLowerCase()} matches "${debouncedSearch}".`
+                      : activeTab.empty.description
+                  }
                   action={
-                    activeTab.id === 'scheduled' ? (
+                    debouncedSearch ? (
+                      <Button variant="secondary" onClick={() => setSearch('')}>
+                        Clear filter
+                      </Button>
+                    ) : activeTab.id === 'scheduled' ? (
                       <Button onClick={() => setComposeOpen(true)}>Schedule an email</Button>
                     ) : undefined
                   }
