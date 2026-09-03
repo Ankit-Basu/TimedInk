@@ -20,5 +20,22 @@ export default defineConfig({
       },
     },
   },
-  build: { outDir: 'dist', sourcemap: true },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        /**
+         * Split the framework out of the app chunk. React, the router and the
+         * query client change only when a dependency is bumped, while app code
+         * changes constantly — separating them means a redeploy only
+         * invalidates the small chunk, not the 250KB one.
+         */
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) return 'vendor';
+          return undefined;
+        },
+      },
+    },
+  },
 });
