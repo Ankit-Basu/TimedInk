@@ -73,6 +73,39 @@ const TABS: Tab[] = [
   },
 ];
 
+/**
+ * Ticks the seconds down to the next poll.
+ *
+ * Deliberately its own component with its own state: a `setInterval` in
+ * DashboardPage would re-render the whole table — and the open drawer — once a
+ * second for the sake of one digit.
+ */
+function RefreshCountdown({
+  pollIntervalMs,
+  isFetching,
+}: {
+  pollIntervalMs: number;
+  isFetching: boolean;
+}) {
+  const seconds = Math.max(1, Math.round(pollIntervalMs / 1000));
+  const [remaining, setRemaining] = useState(seconds);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRemaining((prev) => (prev <= 1 ? seconds : prev - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [seconds]);
+
+  // A fetch can land early — a mutation invalidates the query — so restart the
+  // count from the top whenever one does, or the number drifts from reality.
+  useEffect(() => {
+    if (isFetching) setRemaining(seconds);
+  }, [isFetching, seconds]);
+
+  return <span className="tabular-nums">{isFetching ? 'now' : `${remaining}s`}</span>;
+}
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const [activeTabId, setActiveTabId] = useState(TABS[0]!.id);
@@ -189,7 +222,12 @@ export default function DashboardPage() {
               </div>
               <div>
                 <dt className="label">Refresh</dt>
-                <dd className="mono mt-1.5 text-2xl">{Math.round(POLL_INTERVAL_MS / 1000)}s</dd>
+                <dd className="mono mt-1.5 text-2xl">
+                  <RefreshCountdown
+                    pollIntervalMs={POLL_INTERVAL_MS}
+                    isFetching={emailsQuery.isFetching}
+                  />
+                </dd>
               </div>
             </dl>
           </div>

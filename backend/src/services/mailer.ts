@@ -1,7 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import type SMTPPool from 'nodemailer/lib/smtp-pool/index.js';
-import { env } from '../config/env.js';
+import { env, smtpCredentials } from '../config/env.js';
 import { childLogger } from '../lib/logger.js';
 
 const log = childLogger('mailer');
@@ -67,16 +67,25 @@ const TRANSPORT_TUNING = {
  * creates a new inbox and previously-sent preview links become orphaned.
  */
 async function buildTransporter(): Promise<PooledTransporter> {
-  if (env.ETHEREAL_USER && env.ETHEREAL_PASS) {
+  if (smtpCredentials) {
+    const isEthereal = env.SMTP_HOST.endsWith('ethereal.email');
     log.info(
-      { host: env.SMTP_HOST, user: env.ETHEREAL_USER, pool: true, maxConnections: env.WORKER_CONCURRENCY },
+      {
+        host: env.SMTP_HOST,
+        port: env.SMTP_PORT,
+        user: smtpCredentials.user,
+        pool: true,
+        maxConnections: env.WORKER_CONCURRENCY,
+        // Worth stating plainly at boot: Ethereal accepts mail and discards it.
+        delivery: isEthereal ? 'capture-only (Ethereal never delivers to real inboxes)' : 'real',
+      },
       'using SMTP credentials from env',
     );
     return nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       secure: env.SMTP_SECURE,
-      auth: { user: env.ETHEREAL_USER, pass: env.ETHEREAL_PASS },
+      auth: smtpCredentials,
       ...TRANSPORT_TUNING,
     });
   }

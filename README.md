@@ -240,6 +240,37 @@ Paste those into `backend/.env` and restart the worker. Without pinning, every r
 detail drawer has an *Open preview* button. It is `getTestMessageUrl()`, captured at send time
 onto `ScheduledEmail.previewUrl`, so it is in the API response and the worker log too.
 
+> ### Ethereal never delivers to a real inbox
+>
+> This trips people up, so it is worth stating plainly: Ethereal **accepts** your message, hands
+> back a preview URL, and then **discards it**. Sending to your own Gmail will show `SENT` with a
+> working preview link, and nothing will ever arrive. That is the service working as designed —
+> it exists so you can exercise real SMTP without mailing real people. The app logs
+> `delivery: capture-only` at boot whenever the host is Ethereal.
+
+### Sending real mail
+
+Nothing in the code is Ethereal-specific. `SMTP_USER` / `SMTP_PASS` are the same credential slot
+as `ETHEREAL_USER` / `ETHEREAL_PASS` and take precedence, so pointing at a real provider is
+configuration only:
+
+```bash
+# backend/.env — Gmail example
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=you@gmail.com
+SMTP_PASS=<16-char app password>     # needs 2FA on, then generate an App Password
+```
+
+Brevo (`smtp-relay.brevo.com:587`, 300/day free) and Resend (`smtp.resend.com:587`, user
+`resend`, password = API key) work the same way.
+
+**One gotcha:** the `From` header comes from the `Mailbox` row, and providers only let you send
+from an address you have verified — Gmail silently rewrites a mismatched `From` to the
+authenticated account. Update the seeded mailboxes to an address you own first, via
+`POST /api/mailboxes` or `npx prisma studio → mailboxes → fromEmail`.
+
 ---
 
 ## Architecture
@@ -600,7 +631,8 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 | `DATABASE_URL` | `mysql://root:outbox@localhost:3307/outbox_pilot` | Prisma connection |
 | `REDIS_URL` | `redis://localhost:6379` | BullMQ + warmup counters |
 | `JWT_SECRET` | *(placeholder)* | must be ≥ 16 chars |
-| `ETHEREAL_USER` / `_PASS` | *(auto-provisioned)* | pin to keep one inbox |
+| `ETHEREAL_USER` / `_PASS` | *(auto-provisioned)* | pin to keep one Ethereal inbox |
+| `SMTP_USER` / `SMTP_PASS` | *(unset)* | real-provider credentials; take precedence over the pair above |
 | `WORKER_CONCURRENCY` | `5` | jobs in flight per worker process |
 | `RATE_LIMIT_MAX` / `_DURATION_MS` | `10` / `10000` | queue-wide send cap |
 | `JOB_ATTEMPTS` / `JOB_BACKOFF_MS` | `3` / `5000` | retry policy |

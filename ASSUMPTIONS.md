@@ -267,6 +267,19 @@ right fix and is not built.
 
 ---
 
+### 4a.7 Ethereal is capture-only — **Stated loudly, by design**
+
+Ethereal accepts a message, returns a preview URL, and discards it. Mail addressed to a real
+inbox shows `SENT` with a working preview and never arrives. This is the service behaving
+correctly, but it reliably confuses people, so the app now says so in three places: the boot log
+prints `delivery: capture-only` whenever the host is Ethereal, `.env.example` says it in the
+email block, and the README has a callout.
+
+`SMTP_USER`/`SMTP_PASS` were added as a higher-precedence alias for `ETHEREAL_USER`/`_PASS`, so
+switching to a real provider (Gmail app password, Brevo, Resend) is configuration only — no code
+path is Ethereal-specific. The brief specifies Ethereal, so it remains the default and the demo
+path.
+
 ## 5. Environment and operational assumptions
 
 - **Single-tenant-ish.** Every query is scoped by `userId`, but there is no organisation/team

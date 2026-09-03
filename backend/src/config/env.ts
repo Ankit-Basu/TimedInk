@@ -38,11 +38,22 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: booleanish.default(false),
   /**
-   * Leave both blank to have the app provision a throwaway Ethereal account on
-   * boot (credentials are logged once so you can pin them into .env).
+   * SMTP credentials.
+   *
+   * Leave ALL of these blank to have the app provision a throwaway Ethereal
+   * account on boot (credentials are logged once so you can pin them into
+   * .env). That is the default and what the demo uses.
+   *
+   * ETHEREAL_USER/PASS and SMTP_USER/PASS are the same slot under two names:
+   * the Ethereal pair reads naturally for the default path, and the generic
+   * pair makes it obvious that pointing SMTP_HOST at a real provider (and
+   * supplying its credentials) is all it takes to send real mail. SMTP_* wins
+   * if both are set.
    */
   ETHEREAL_USER: z.string().optional(),
   ETHEREAL_PASS: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
 
   // ---- Queue / worker ------------------------------------------------------
   EMAIL_QUEUE_NAME: z.string().default('outbox-emails'),
@@ -93,5 +104,16 @@ export const isTest = env.NODE_ENV === 'test';
 export const corsOrigins: string[] = env.CORS_ORIGIN.split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+/**
+ * The effective SMTP credentials, or null when none are configured — in which
+ * case the mailer provisions a throwaway Ethereal account instead.
+ */
+export const smtpCredentials: { user: string; pass: string } | null =
+  env.SMTP_USER && env.SMTP_PASS
+    ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+    : env.ETHEREAL_USER && env.ETHEREAL_PASS
+      ? { user: env.ETHEREAL_USER, pass: env.ETHEREAL_PASS }
+      : null;
 
 export type Env = z.infer<typeof envSchema>;
