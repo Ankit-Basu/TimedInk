@@ -92,8 +92,11 @@ async function buildTransporter(): Promise<PooledTransporter> {
 
   const account = await nodemailer.createTestAccount();
 
+  // Credentials deliberately are NOT structured fields here — the redactor
+  // would censor them, and for a throwaway Ethereal inbox showing them is the
+  // entire point. They go out in the message below instead.
   log.info(
-    { user: account.user, pass: account.pass, host: account.smtp.host, port: account.smtp.port },
+    { user: account.user, host: account.smtp.host, port: account.smtp.port },
     'provisioned a throwaway Ethereal account',
   );
   log.info(

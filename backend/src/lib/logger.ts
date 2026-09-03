@@ -16,7 +16,12 @@ const options: LoggerOptions = {
       'passwordHash',
       '*.passwordHash',
       'smtp.pass',
+      // Both forms: '*.pass' only matches one level down, so a top-level
+      // `pass` field would otherwise sail straight through.
+      'pass',
       '*.pass',
+      'auth.pass',
+      '*.auth.pass',
     ],
     censor: '[redacted]',
   },
