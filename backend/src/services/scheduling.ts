@@ -4,7 +4,8 @@ import { childLogger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
-import { textToHtml, htmlToText } from '../lib/html.js';
+import { htmlToText } from '../lib/html.js';
+import { renderEmailHtml } from '../lib/emailTemplate.js';
 import {
   emailQueue,
   jobIdForEmail,
@@ -128,12 +129,20 @@ export async function createScheduledEmail(
   input: CreateScheduledEmailInput,
 ): Promise<ScheduledEmail> {
   const bodyText = input.bodyText ?? (input.bodyHtml ? htmlToText(input.bodyHtml) : '');
-  const bodyHtml = input.bodyHtml ?? textToHtml(bodyText);
 
   // Bonus A: informational only - a bad score never blocks scheduling.
   const deliverability = scoreDeliverability(input.subject, bodyText);
 
   const mailboxId = await pickMailboxId(input.userId, input.mailboxId);
+
+  // Render the HTML part against the resolved mailbox, so the sender's display
+  // name can appear in the masthead. An explicit bodyHtml from the caller wins.
+  const mailbox = mailboxId
+    ? await prisma.mailbox.findUnique({ where: { id: mailboxId }, select: { fromName: true } })
+    : null;
+  const bodyHtml =
+    input.bodyHtml ??
+    renderEmailHtml(bodyText, { fromName: mailbox?.fromName ?? null, subject: input.subject });
 
   const created = await prisma.scheduledEmail.create({
     data: {

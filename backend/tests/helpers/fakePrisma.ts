@@ -39,6 +39,9 @@ export class FakePrisma {
       this.mailboxes.find(
         (m) => (!where.id || m.id === where.id) && (!where.userId || m.userId === where.userId),
       ) ?? null,
+
+    findUnique: async ({ where }: { where: { id: string } }) =>
+      this.mailboxes.find((m) => m.id === where.id) ?? null,
   };
 
   readonly scheduledEmail = {
