@@ -17,7 +17,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
   <img alt="Prisma with MySQL 8" src="https://img.shields.io/badge/Prisma-MySQL%208-2D3748?style=flat-square&logo=prisma&logoColor=white" />
   <img alt="BullMQ on Redis 7" src="https://img.shields.io/badge/BullMQ-Redis%207-DC382D?style=flat-square&logo=redis&logoColor=white" />
   <img alt="React 19" src="https://img.shields.io/badge/React-19-087EA4?style=flat-square&logo=react&logoColor=white" />
-  <img alt="56 tests passing" src="https://img.shields.io/badge/tests-56%20passing-E5A13C?style=flat-square" />
+  <img alt="58 tests passing" src="https://img.shields.io/badge/tests-58%20passing-E5A13C?style=flat-square" />
 </p>
 
 <br />
@@ -34,7 +34,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 | | |
 | --- | --- |
 | **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real, viewable preview link |
-| **Tests** | 56, hermetic — no MySQL, Redis or SMTP needed to run them |
+| **Tests** | 58, hermetic — no MySQL, Redis or SMTP needed to run them |
 | **Clone → running** | ~4 minutes, five commands |
 
 ---
@@ -363,6 +363,13 @@ is the point.
 > from [`emailQueue.ts`](backend/src/queue/emailQueue.ts) and applied in
 > [`worker.ts`](backend/src/worker.ts) so it reads as one setting.
 
+**Connection pooling.** The SMTP transport is pooled, with `maxConnections` tracking
+`WORKER_CONCURRENCY`. Nodemailer's default opens a fresh connection per message, so every email
+pays a full TCP + STARTTLS + AUTH handshake — measured at **4,367ms average** against Ethereal.
+Pooled, that is paid once per connection: **1,105ms in steady state, a ~4× improvement**, and the
+spread collapsed from 1,768ms to 128ms. Explicit connect/greeting/socket timeouts mean a wedged
+network surfaces as a retryable failure rather than a job stuck in `SENDING` holding a worker slot.
+
 **Retries.** Transient failures use BullMQ's built-in `attempts` + exponential backoff (3
 attempts, 5s base). Between attempts the row sits at `QUEUED` with `lastError` populated, so the
 dashboard shows it as still in flight; it only lands in `FAILED` once attempts are exhausted.
@@ -554,6 +561,9 @@ Details worth calling out:
 - **Failure containment.** A render-time throw hits an error boundary that keeps the page usable
   and points out that the queue is unaffected, rather than white-screening.
 - **Keyboard.** `c` opens the composer, `Esc` closes either overlay.
+- **Filtering.** A debounced search over recipient and subject, backed by the API's `?q=`.
+- **Caching.** The build splits vendor (83KB gzip, changes on dependency bumps) from app
+  code (13KB gzip, changes constantly), so a redeploy only invalidates the small chunk.
 
 ---
 
@@ -563,7 +573,7 @@ Details worth calling out:
 cd backend && npm test
 ```
 
-**56 tests, ~2s, and no MySQL, Redis or SMTP required.** Everything at the process edge is faked,
+**58 tests, ~2s, and no MySQL, Redis or SMTP required.** Everything at the process edge is faked,
 so the suite runs on a clean checkout and in CI without containers.
 
 | File | Covers |
@@ -606,7 +616,8 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 
 ## Demo script
 
-A five-minute path that hits everything worth showing.
+A five-minute path that hits everything worth showing. A full read-aloud version, with
+prep steps and timings, is in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md).
 
 **1 · Seeded login** *(~20s)* — open <http://localhost:5173>; the demo credentials are pre-filled.
 
@@ -702,7 +713,7 @@ In priority order, with reasoning — the full list of shortcuts and trade-offs 
    most obvious hardening gap today.
 3. **A conditional status update as the send gate.** Closes the last microseconds of the
    cancel-versus-send race (§3.1) with a compare-and-set instead of a read-then-send.
-4. **Frontend tests.** All 56 are backend; with the time available, testing the
+4. **Frontend tests.** All 58 are backend; with the time available, testing the
    scheduling/reconciliation/limiter logic was worth more than testing that a table renders.
 5. **CI + app Dockerfiles.** `npm test` and `npm run typecheck` are hermetic and would drop
    straight into a workflow.

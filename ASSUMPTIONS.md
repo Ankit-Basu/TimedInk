@@ -186,7 +186,7 @@ reputation, none of which are meaningful against Ethereal.
 | **Mailbox CRUD in the UI** | `POST /api/mailboxes` exists and is tested by hand; the UI only lists mailboxes and advances warmup. The seed creates two, which is what the demo needs. |
 | **Bulk actions** | No multi-select cancel. |
 | **Refresh tokens / password reset / email verification** | Out of scope here; register + login only. |
-| **Frontend tests** | All 56 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
+| **Frontend tests** | All 58 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
 | **CI pipeline** | No GitHub Actions workflow. `npm test` and `npm run typecheck` are hermetic and would drop straight into one. |
 | **Dockerfiles for the app itself** | Compose runs MySQL + Redis only; the app runs on the host for fast reloads and readable stack traces. Production would add multi-stage Dockerfiles for API and worker. |
 | **Observability** | Structured pino logs only. No metrics, no tracing. Queue depth, send latency and failure rate are the three you would want first. |
@@ -307,7 +307,9 @@ Everything in this list was actually run, not just written:
 - ✅ Live deliverability preview in compose (spammy draft scored 20 with 4 flags, still schedulable)
 - ✅ Detail drawer renders the real event trail (CREATED → 4× QUEUED from three restarts, with shrinking delays → SENDING → SENT → OPENED)
 - ✅ Modal/drawer focus trap holds after 12 Tabs; focus returns to the trigger; scroll lock released
-- ✅ `npm test` — 56 passing, no containers required
+- ✅ SMTP pooling measured: 4,367ms → 1,105ms average per send (cold pool 2,487ms)
+- ✅ Search filters the list via the API `?q=`, with a distinct no-match state
+- ✅ `npm test` — 58 passing, no containers required
 - ✅ `tsc --noEmit` clean on both backend and frontend under `strict`
 - ✅ `npm run build` clean on both
 
