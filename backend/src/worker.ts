@@ -6,7 +6,7 @@ import { disconnectPrisma } from './lib/prisma.js';
 import { EMAIL_QUEUE_NAME, rateLimitConfig, type SendEmailJobData } from './queue/emailQueue.js';
 import { processSendEmailJob } from './queue/processor.js';
 import { startFollowUpSweeper, stopFollowUpSweeper } from './services/followUp.js';
-import { verifyMailer } from './services/mailer.js';
+import { closeMailer, verifyMailer } from './services/mailer.js';
 
 const log = childLogger('worker');
 
@@ -85,6 +85,9 @@ async function main(): Promise<void> {
     // `worker.close()` waits for in-flight jobs so a send in progress is not
     // orphaned halfway through.
     await worker.close();
+    // Only then tear down the SMTP pool — closing it first would kill the
+    // sockets those in-flight sends are still using.
+    await closeMailer();
     await closeRedisConnections();
     await disconnectPrisma();
     process.exit(0);
