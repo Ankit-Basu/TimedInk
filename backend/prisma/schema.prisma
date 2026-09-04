@@ -7,6 +7,10 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" covers local development. The Debian target is listed explicitly
+  // so a build that runs somewhere other than the host it deploys to (Render's
+  // build image, a Docker stage) still ships a usable query engine.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

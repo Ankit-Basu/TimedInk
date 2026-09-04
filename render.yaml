@@ -1,0 +1,71 @@
+# Render Blueprint — optional convenience.
+#
+# Render's dashboard walkthrough in DEPLOYMENT.md is the authoritative path and
+# does not need this file. Use it if you prefer "New → Blueprint" and pointing
+# Render at the repo.
+#
+# What it does NOT create: the MySQL database. Render does not offer MySQL, so
+# that comes from Aiven (or any provider) and its URL is pasted in as a secret.
+#
+# NOTE ON THE FREE TIER
+# A free web service sleeps after ~15 minutes without traffic, and a sleeping
+# process sends nothing. The boot reconciler replays the backlog on wake, so
+# nothing is lost, but delivery is late. DEPLOYMENT.md covers the keep-alive
+# ping that avoids this.
+
+services:
+  - type: web
+    name: timedink-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    # `prisma generate` must run before tsc: the build imports the generated client.
+    buildCommand: npm ci && npx prisma generate && npm run build
+    # Migrations run at start, not at build — the build step has no database.
+    startCommand: npx prisma migrate deploy && node dist/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render's free plan has no background workers, so the queue worker runs
+      # inside this process. See src/queue/emailWorker.ts.
+      - key: WORKER_INLINE
+        value: "true"
+
+      # Render injects PORT; the app reads it.
+      - key: LOG_PRETTY
+        value: "false"
+
+      # Bull Board is unauthenticated. Never expose it on a public host.
+      - key: BULL_BOARD_ENABLED
+        value: "false"
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: timedink-redis
+          property: connectionString
+
+      # Paste these in the dashboard — they are secrets or deploy-specific.
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+
+  # Render calls this "Key Value" in the dashboard; the blueprint keyword is
+  # still `redis`. The free plan has no persistence — which this app tolerates,
+  # because MySQL is the source of truth and the reconciler rebuilds the queue.
+  - type: redis
+    name: timedink-redis
+    plan: free
+    ipAllowList: []

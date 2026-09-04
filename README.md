@@ -58,6 +58,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 - [Configuration](#configuration)
 - [Demo script](#demo-script)
 - [Troubleshooting](#troubleshooting)
+- [Deploying](#deploying)
 - [What I'd build next](#what-id-build-next)
 
 ---
@@ -746,6 +747,25 @@ shows `n/limit today`. Click **Advance day**, or set `WARMUP_ENABLED=false`.
 ```bash
 cd backend && npx prisma migrate reset --force && npm run seed
 ```
+
+---
+
+## Deploying
+
+Full free-tier walkthrough — Render + Vercel + Aiven MySQL — in
+[`DEPLOYMENT.md`](DEPLOYMENT.md), with a [`render.yaml`](render.yaml) blueprint and
+[`frontend/vercel.json`](frontend/vercel.json) already in the repo.
+
+Two things are worth knowing before you read it:
+
+- **`WORKER_INLINE=true`** runs the BullMQ worker inside the API process. Render's free plan has
+  no background workers, so a single-service deploy needs it. It is off by default because a
+  dedicated worker is the right topology — inline means a slow SMTP send adds latency to HTTP
+  requests.
+- **A free Render service sleeps after ~15 minutes** and a sleeping process sends nothing. The
+  boot reconciler replays the backlog on wake so nothing is lost, but delivery is late; a free
+  10-minute keep-alive ping removes the problem. The same design that survives a wiped Redis is
+  what makes free hosting viable at all.
 
 ---
 
