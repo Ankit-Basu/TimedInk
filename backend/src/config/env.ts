@@ -59,6 +59,13 @@ const envSchema = z.object({
   EMAIL_QUEUE_NAME: z.string().default('outbox-emails'),
   /** How many jobs one worker process handles at once. */
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
+  /**
+   * Run the BullMQ worker inside the API process instead of as its own service.
+   * Off by default — a dedicated worker is the right topology. Turn it on for
+   * hosts that only allow a single process (Render's free tier). See
+   * DEPLOYMENT.md.
+   */
+  WORKER_INLINE: booleanish.default(false),
   /** Simulated provider send-rate cap: RATE_LIMIT_MAX sends per DURATION_MS. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_DURATION_MS: z.coerce.number().int().positive().default(10_000),

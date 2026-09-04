@@ -5,6 +5,7 @@ import { prisma, disconnectPrisma } from './lib/prisma.js';
 import { closeRedisConnections } from './lib/redis.js';
 import { closeQueue } from './queue/emailQueue.js';
 import { createApp } from './app.js';
+import { startEmailWorker, stopEmailWorker } from './queue/emailWorker.js';
 import { runBootReconciliation } from './services/reconciliation.js';
 
 /**
@@ -30,6 +31,11 @@ async function main(): Promise<void> {
 
   await runBootReconciliation();
 
+  // Single-process deployments run the worker here rather than as a separate
+  // service. Started AFTER reconciliation, so the queue is whole before
+  // anything starts draining it.
+  const inlineWorker = env.WORKER_INLINE ? startEmailWorker() : null;
+
   const app = createApp();
 
   const server: Server = app.listen(env.PORT, () => {
@@ -48,6 +54,7 @@ async function main(): Promise<void> {
 
     // Stop accepting new connections, then drain.
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (inlineWorker) await stopEmailWorker(inlineWorker);
     await closeQueue();
     await closeRedisConnections();
     await disconnectPrisma();
