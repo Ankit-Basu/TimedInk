@@ -1,0 +1,16 @@
+{
+  // Production build only.
+  //
+  // The base tsconfig deliberately includes tests and prisma/ so `npm run
+  // typecheck` covers them — but that widens rootDir to the package root, which
+  // makes tsc emit dist/src/server.js instead of dist/server.js. This config
+  // narrows the build to src/ so the emitted layout matches what `npm start`
+  // and the Render start command expect.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "prisma", "scripts"]
+}
