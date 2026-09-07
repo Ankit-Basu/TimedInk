@@ -33,7 +33,7 @@ const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, 
 export interface EmailTemplateOptions {
   /** Shown small above the message, e.g. the sender's display name. */
   fromName?: string | null;
-  /** Rendered as the preheader — the grey line clients show next to the subject. */
+  /** Used as the document title only — NOT as the preheader. See below. */
   subject?: string;
 }
 
@@ -63,10 +63,16 @@ function renderParagraphs(text: string): string {
 export function renderEmailHtml(bodyText: string, options: EmailTemplateOptions = {}): string {
   const paragraphs = renderParagraphs(bodyText);
 
-  // The preheader is the preview line in an inbox list. Left empty it fills
-  // with whatever text comes first, which is usually the wordmark.
-  const preheader = escapeHtml((options.subject ?? '').trim()).slice(0, 140);
+  /*
+    The preheader is the grey line an inbox shows after the subject.
+    It is drawn from the BODY, not the subject: the subject is already on the
+    row, so repeating it wastes the slot — Gmail skips the duplicate and falls
+    through to whatever text comes next, which was the wordmark. Observed in a
+    real inbox as "Reschedule me · TimedInk Ben from TimedInk Testing...".
+  */
+  const preheader = escapeHtml(bodyText.trim().replace(/\s+/g, ' ')).slice(0, 140);
   const sender = options.fromName ? escapeHtml(options.fromName) : null;
+  const title = escapeHtml((options.subject ?? '').trim());
 
   return `<!doctype html>
 <html lang="en">
@@ -74,10 +80,16 @@ export function renderEmailHtml(bodyText: string, options: EmailTemplateOptions 
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light" />
-<title>${preheader}</title>
+<title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:${PAPER};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
+  <!--
+    Zero-width joiners padded out after the preheader. Without them a client
+    keeps scraping the next visible text into the preview line, which is how
+    the wordmark ended up there.
+  -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${'&zwnj;&nbsp;'.repeat(60)}</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAPER};">
     <tr>
