@@ -125,10 +125,13 @@ Keep this to hand — it becomes `DATABASE_URL`.
 
 Two details that matter:
 
-- **`--include=dev` is required.** You set `NODE_ENV=production`, and `npm ci` honours that by
-  omitting devDependencies — which is where `@types/*` live. The build fails with
+- **devDependencies must be installed.** You set `NODE_ENV=production`, and `npm ci` honours that
+  by omitting devDependencies — which is where `@types/*` live. The build then fails with
   `TS2688: Cannot find type definition file for 'node'`. Confusingly `tsc` itself still runs,
   because TypeScript arrives transitively through Prisma; only the type packages go missing.
+
+  `backend/.npmrc` sets `include=dev`, so this is handled from the repo and any build command
+  works. The `--include=dev` below is belt-and-braces for hosts that ignore `.npmrc`.
 - `prisma generate` must run **before** `npm run build`, because the TypeScript build imports the
   generated client.
 - `prisma migrate deploy` runs at **start**, not build — Render's build step has no database
