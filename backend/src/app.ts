@@ -43,7 +43,9 @@ export function createApp(): Express {
         // uninteresting; drop them to debug so the demo log stays readable.
         autoLogging: {
           ignore: (req: IncomingMessage) =>
-            req.url?.startsWith('/api/track/') === true || req.url?.startsWith('/health') === true,
+            req.url?.startsWith('/api/track/') === true ||
+            req.url?.startsWith('/health') === true ||
+            req.url === '/',
         },
         customLogLevel: (_req: IncomingMessage, res: ServerResponse, err?: Error) => {
           if (err || res.statusCode >= 500) return 'error';
@@ -53,6 +55,23 @@ export function createApp(): Express {
       }),
     );
   }
+
+  /**
+   * Service descriptor at the root.
+   *
+   * The API has no UI, so `/` used to 404 — which meant every uptime probe,
+   * CDN health check and curious browser visit logged a warning with a full
+   * stack trace. This turns the root into something honest and quiet: what
+   * this is, and where to go instead.
+   */
+  app.get('/', (_req, res) => {
+    res.json({
+      service: 'TimedInk API',
+      status: 'ok',
+      health: '/health',
+      docs: 'https://github.com/Ankit-Basu/TimedInk',
+    });
+  });
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
