@@ -1,16 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
 import { useFocusTrap } from '../../lib/useFocusTrap';
-import { formatDateTime, formatRelative } from '../../lib/format';
-import { Button, ErrorState, Spinner, StatusBadge } from '../../components/ui';
-import type { EmailEvent, EmailEventType } from '../../lib/types';
+import { datetimeLocalValue, formatDateTime, formatRelative, localInputToUtcIso } from '../../lib/format';
+import { Button, ErrorState, Field, Input, Spinner, StatusBadge } from '../../components/ui';
+import type { EmailEvent, EmailEventType, ScheduledEmailDetail } from '../../lib/types';
 
 interface Props {
   emailId: string | null;
   onClose: () => void;
+  /** Opens the composer pre-filled from this email. */
+  onDuplicate?: (email: ScheduledEmailDetail) => void;
 }
 
 const CANCELLABLE = new Set(['PENDING', 'QUEUED']);
@@ -24,11 +26,13 @@ const CANCELLABLE = new Set(['PENDING', 'QUEUED']);
  * after a restart". The list view can only show the *current* state; this shows
  * how it got there.
  */
-export default function EmailDetailDrawer({ emailId, onClose }: Props) {
+export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Props) {
   const open = emailId !== null;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const panelRef = useFocusTrap<HTMLDivElement>(open);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [newTime, setNewTime] = useState('');
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['email', emailId],
@@ -49,6 +53,23 @@ export default function EmailDetailDrawer({ emailId, onClose }: Props) {
     onError: (err: unknown) =>
       showToast('error', 'Could not cancel', err instanceof Error ? err.message : undefined),
   });
+
+  const reschedule = useMutation({
+    mutationFn: (scheduledAt: string) => api.rescheduleEmail(emailId!, scheduledAt),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ['emails'] });
+      void queryClient.invalidateQueries({ queryKey: ['email', emailId] });
+      setRescheduling(false);
+      showToast('success', 'Rescheduled', `Now going out ${formatDateTime(updated.scheduledAt)}.`);
+    },
+    onError: (err: unknown) =>
+      showToast('error', 'Could not reschedule', err instanceof Error ? err.message : undefined),
+  });
+
+  // Close the inline reschedule form whenever the drawer changes email.
+  useEffect(() => {
+    setRescheduling(false);
+  }, [emailId]);
 
   useEffect(() => {
     if (!open) return;
@@ -187,12 +208,63 @@ export default function EmailDetailDrawer({ emailId, onClose }: Props) {
               </pre>
             </div>
 
-            <div className="flex items-center gap-3 px-6 py-6">
+            {/*
+              Reschedule uses BullMQ's changeDelay on the existing job rather
+              than cancel-and-recreate, so the job keeps its identity.
+            */}
+            {CANCELLABLE.has(data.status) && rescheduling && (
+              <div className="border-b border-rule px-6 py-6">
+                <Field
+                  label="New send time"
+                  required
+                  hint="Your local time, converted to UTC on the way out."
+                >
+                  <Input
+                    type="datetime-local"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                  />
+                </Field>
+                <div className="mt-4 flex gap-3">
+                  <Button
+                    loading={reschedule.isPending}
+                    disabled={!newTime}
+                    onClick={() => reschedule.mutate(localInputToUtcIso(newTime))}
+                  >
+                    Move it
+                  </Button>
+                  <Button variant="secondary" onClick={() => setRescheduling(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 px-6 py-6">
               {data.previewUrl && (
                 <Button variant="secondary" onClick={() => window.open(data.previewUrl!, '_blank')}>
                   Open preview ↗
                 </Button>
               )}
+
+              {onDuplicate && (
+                <Button variant="secondary" onClick={() => onDuplicate(data)}>
+                  Duplicate
+                </Button>
+              )}
+
+              {CANCELLABLE.has(data.status) && !rescheduling && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setNewTime(datetimeLocalValue(15));
+                    setRescheduling(true);
+                  }}
+                >
+                  Reschedule
+                </Button>
+              )}
+
               {CANCELLABLE.has(data.status) && (
                 <Button
                   variant="danger"

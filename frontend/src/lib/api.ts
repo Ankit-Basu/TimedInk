@@ -176,6 +176,13 @@ export const api = {
 
   cancelEmail: (id: string) => request<ScheduledEmail>(`/api/emails/${id}`, { method: 'DELETE' }),
 
+  /** Move a PENDING/QUEUED email to a new send time. */
+  rescheduleEmail: (id: string, scheduledAt: string) =>
+    request<ScheduledEmail>(`/api/emails/${id}/schedule`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduledAt }),
+    }),
+
   previewScore: (subject: string, body: string) =>
     request<DeliverabilityPreview>('/api/emails/preview-score', {
       method: 'POST',

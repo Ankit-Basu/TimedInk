@@ -193,6 +193,75 @@ export async function createScheduledEmail(
 const CANCELLABLE_STATUSES: readonly ScheduledEmail['status'][] = ['PENDING', 'QUEUED'];
 
 /**
+ * Move a not-yet-sent email to a new send time.
+ *
+ * The interesting part is the queue side. Cancelling and re-adding would churn
+ * the job and lose its attempt history, so this uses BullMQ's `changeDelay`,
+ * which rewrites the delay on the existing delayed job in place. If the job has
+ * gone from Redis — evicted, flushed, or never added because Redis was down —
+ * it falls back to the same enqueue path the create flow and the reconciler
+ * use, so the row is repaired rather than left dangling.
+ *
+ * MySQL is updated first, for the same reason the create path writes the row
+ * before touching Redis: the intent has to be durable before the derived index
+ * moves.
+ */
+export async function rescheduleEmail(
+  userId: string,
+  id: string,
+  scheduledAt: Date,
+  now: Date = new Date(),
+): Promise<ScheduledEmail> {
+  const existing = await prisma.scheduledEmail.findFirst({ where: { id, userId } });
+  if (!existing) throw notFound('Scheduled email not found');
+
+  if (!CANCELLABLE_STATUSES.includes(existing.status)) {
+    throw conflict(`Cannot reschedule an email with status ${existing.status}`, {
+      status: existing.status,
+    });
+  }
+
+  const previous = existing.scheduledAt;
+  const delayMs = Math.max(0, scheduledAt.getTime() - now.getTime());
+
+  const updated = await prisma.scheduledEmail.update({
+    where: { id },
+    data: { scheduledAt },
+  });
+
+  const jobId = existing.bullJobId ?? jobIdForEmail(existing.id);
+  let strategy: 'changeDelay' | 're-enqueued' = 'changeDelay';
+
+  try {
+    const job = await emailQueue.getJob(jobId);
+    if (job) {
+      await job.changeDelay(delayMs);
+    } else {
+      // The row is real but the job is not — repair it through the shared path.
+      strategy = 're-enqueued';
+      await enqueueScheduledEmail(updated, now);
+    }
+  } catch (err) {
+    log.error({ err, emailId: id, jobId }, 'failed to move the queued job; reconciler will repair');
+  }
+
+  await recordEvent(id, 'QUEUED', {
+    rescheduled: true,
+    strategy,
+    from: previous.toISOString(),
+    to: scheduledAt.toISOString(),
+    delayMs,
+  });
+
+  log.info(
+    { emailId: id, from: previous.toISOString(), to: scheduledAt.toISOString(), delayMs, strategy },
+    'scheduled email rescheduled',
+  );
+
+  return updated;
+}
+
+/**
  * Cancel a not-yet-sent email: drop the Redis job, then mark the row CANCELLED.
  *
  * There is an unavoidable race where the worker picks the job up in between.

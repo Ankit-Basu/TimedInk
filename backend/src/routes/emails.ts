@@ -12,7 +12,11 @@ import {
   toScheduledEmailDto,
   type ScheduledEmailDto,
 } from '../lib/dto.js';
-import { cancelScheduledEmail, createScheduledEmail } from '../services/scheduling.js';
+import {
+  cancelScheduledEmail,
+  createScheduledEmail,
+  rescheduleEmail,
+} from '../services/scheduling.js';
 import { scoreDeliverability } from '../services/deliverability.js';
 
 export const emailsRouter = Router();
@@ -216,6 +220,37 @@ emailsRouter.get(
     if (!email) throw notFound('Scheduled email not found');
 
     res.json({ data: toScheduledEmailDetailDto(email) });
+  }),
+);
+
+const rescheduleSchema = z.object({
+  /** New absolute instant, ISO-8601, already converted to UTC by the client. */
+  scheduledAt: z.coerce.date().refine((d) => !Number.isNaN(d.getTime()), {
+    message: 'scheduledAt must be a valid ISO-8601 datetime',
+  }),
+});
+
+/**
+ * PATCH /api/emails/:id/schedule - move a PENDING/QUEUED email to a new time.
+ *
+ * Uses BullMQ's changeDelay on the existing job rather than cancel-and-recreate,
+ * so the job keeps its identity and attempt history.
+ */
+emailsRouter.patch(
+  '/:id/schedule',
+  validate({ params: idParamSchema, body: rescheduleSchema }),
+  asyncHandler(async (req, res) => {
+    const user = currentUser(req);
+    const { id } = validated<{ id: string }>(res, 'params');
+    const { scheduledAt } = validated<{ scheduledAt: Date }>(res, 'body');
+
+    await rescheduleEmail(user.id, id, scheduledAt);
+
+    const withMailbox = await prisma.scheduledEmail.findUniqueOrThrow({
+      where: { id },
+      include: { mailbox: true },
+    });
+    res.json({ data: toScheduledEmailDto(withMailbox) });
   }),
 );
 
