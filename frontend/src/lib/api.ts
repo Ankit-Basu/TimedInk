@@ -92,9 +92,20 @@ async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
       },
     });
   } catch {
-    // Network-level failure (API down, DNS, offline). Give the UI something
-    // actionable rather than a bare TypeError.
-    throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the API. Is the backend running?');
+    /*
+      Network-level failure: the API is down, DNS failed, or the browser blocked
+      it (CORS, mixed content). Name the URL that was actually attempted — a
+      bare "could not reach the API" sent a real debugging session hunting CORS
+      when the true cause was VITE_API_BASE_URL pointing at the wrong host.
+      Whatever the browser refused, the URL is the first thing worth seeing.
+    */
+    throw new ApiError(
+      0,
+      'NETWORK_ERROR',
+      BASE_URL
+        ? `Could not reach the API at ${BASE_URL}. Check VITE_API_BASE_URL, or whether the backend is running.`
+        : 'Could not reach the API. Is the backend running?',
+    );
   }
 
   if (response.status === 204) return undefined as T;

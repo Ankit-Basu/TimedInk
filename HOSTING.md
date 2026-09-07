@@ -108,12 +108,14 @@ That is genuinely all. `frontend/vercel.json` proxies `/api/*` to the Render ser
 browser only ever talks to its own origin — no environment variable, and no `CORS_ORIGIN` to
 keep in sync.
 
-> **Why not `VITE_API_BASE_URL`?** It works, but Vite inlines `VITE_*` at **build** time. Set it
-> after the first deploy and the shipped bundle still carries the old value, the SPA calls
-> *itself* at `/api/...`, and you get `405 Method Not Allowed` surfaced as "Could not reach the
-> API". Easy to do and confusing to diagnose. The proxy has no such ordering trap. If you do
-> prefer the direct route, set the variable **before** the first build and add your Vercel origin
-> to `CORS_ORIGIN` on Render.
+> **Do not set `VITE_API_BASE_URL`.** If it is set it wins, and the proxy is bypassed. It also
+> has two traps: Vite inlines `VITE_*` at **build** time, so setting it after a deploy silently
+> ships the old value; and any typo in the host produces a CORS error in the console, which sends
+> you hunting the wrong problem entirely. If the variable is already set in Vercel, **delete it
+> and redeploy** — Settings → Environment Variables → remove → Deployments → Redeploy.
+>
+> If you do want the browser talking to Render directly, set it to your exact service URL
+> **before** the first build and add the Vercel origin to `CORS_ORIGIN` on Render.
 >
 > The proxy destination is hardcoded to `https://timedink.onrender.com` — change it in
 > `vercel.json` if your API URL differs.
