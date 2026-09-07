@@ -22,6 +22,13 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 
 <br />
 
+**[Live app](https://timed-ink.vercel.app)** · **[API](https://timedink.onrender.com/health)** · **[Demo script](DEMO_SCRIPT.md)** · **[Assumptions](ASSUMPTIONS.md)**
+
+<sub>Sign in with <code>demo@timedink.dev</code> / <code>demo1234</code>. Free tier — the first
+request can take ~50s while the instance wakes.</sub>
+
+<br />
+
 **MySQL is the source of truth. Redis is a derived index that can be rebuilt at any moment.**<br />
 <sub>Every design decision below follows from that one sentence.</sub>
 
@@ -557,6 +564,7 @@ are `{ "data": … }`; list responses add `{ "pagination": … }`. Errors are
 | `POST` | `/api/mailboxes` | add a mailbox |
 | `POST` | `/api/mailboxes/:id/advance-warmup` | demo control for the warmup ramp |
 | `GET` | `/api/track/:id.png` | open-tracking pixel (**unauthenticated**) |
+| `GET` | `/` | service descriptor — keeps uptime probes off the 404 path |
 | `GET` | `/health` | liveness |
 
 **Auth choice:** JWT as a **bearer token** in `localStorage`. Chosen over an httpOnly cookie
@@ -759,9 +767,39 @@ cd backend && npx prisma migrate reset --force && npm run seed
 
 ## Deploying
 
+It is deployed:
+
+| | |
+| --- | --- |
+| **App** | <https://timed-ink.vercel.app> — Vercel, static SPA |
+| **API** | <https://timedink.onrender.com> — Render, free web service |
+| **Database** | Aiven MySQL, free plan |
+| **Queue** | Render Key Value (Redis), free plan |
+
 [`HOSTING.md`](HOSTING.md) is the 20-minute copy-paste path; [`DEPLOYMENT.md`](DEPLOYMENT.md) is
 the same ground with troubleshooting and the reasoning. A [`render.yaml`](render.yaml) blueprint
 and [`frontend/vercel.json`](frontend/vercel.json) are already in the repo.
+
+**Three things about the free tier**, all verified on the live instance rather than assumed:
+
+- **`WORKER_INLINE=true`** runs the BullMQ worker inside the API process. Render's free plan has
+  no background workers, so a single-service deploy needs it. It is off by default because a
+  dedicated worker is the right topology — inline means a slow SMTP send adds latency to HTTP
+  requests.
+- **The service sleeps after ~15 minutes** and a sleeping process sends nothing. The boot
+  reconciler replays the backlog on wake so nothing is lost, but delivery is late; a free
+  10-minute keep-alive ping removes the problem. The same design that survives a wiped Redis is
+  what makes free hosting viable at all.
+- **Outbound SMTP is blocked on the free plan**, so the deployed instance schedules, queues and
+  retries correctly but cannot complete a send. The same instance reaches Aiven MySQL on port
+  22852 without trouble while `smtp.ethereal.email:587` times out — a port block, not a bug.
+  Delivery is demonstrated locally; [`DEPLOYMENT.md`](DEPLOYMENT.md) carries the port-2525
+  workaround for anyone who wants the hosted instance sending too.
+
+That last one had an upside: it exercised the retry path against a genuine network failure —
+three attempts with exponential backoff, then `FAILED` with the error preserved and the whole
+sequence visible in the email's timeline. That behaviour was previously implemented but never
+tested against a real outage.
 
 Two things are worth knowing before you read it:
 
