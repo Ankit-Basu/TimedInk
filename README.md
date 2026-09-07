@@ -510,6 +510,7 @@ ramp is demonstrable without waiting real days.
 | Send pipeline / retries | [`queue/processor.ts`](backend/src/queue/processor.ts) · [`services/mailer.ts`](backend/src/services/mailer.ts) |
 | Auth (JWT + bcrypt) | [`services/auth.ts`](backend/src/services/auth.ts) · [`middleware/auth.ts`](backend/src/middleware/auth.ts) · [`routes/auth.ts`](backend/src/routes/auth.ts) |
 | Cancellation | [`services/scheduling.ts`](backend/src/services/scheduling.ts) (`cancelScheduledEmail`) |
+| Reschedule (BullMQ `changeDelay`) | [`services/scheduling.ts`](backend/src/services/scheduling.ts) (`rescheduleEmail`) |
 | Audit trail | [`services/events.ts`](backend/src/services/events.ts) |
 | Validation / errors / logging / config | [`middleware/validate.ts`](backend/src/middleware/validate.ts) · [`middleware/error.ts`](backend/src/middleware/error.ts) · [`lib/logger.ts`](backend/src/lib/logger.ts) · [`config/env.ts`](backend/src/config/env.ts) |
 | Bonus A — deliverability | [`services/deliverability.ts`](backend/src/services/deliverability.ts) |
@@ -549,6 +550,7 @@ are `{ "data": … }`; list responses add `{ "pagination": … }`. Errors are
 | `GET` | `/api/emails?status=&page=&pageSize=&q=` | list (status accepts `SENT,FAILED`) |
 | `GET` | `/api/emails/stats` | per-status counts for the tab badges |
 | `GET` | `/api/emails/:id` | detail **incl. the event timeline** |
+| `PATCH` | `/api/emails/:id/schedule` | move a `PENDING`/`QUEUED` email to a new time |
 | `DELETE` | `/api/emails/:id` | cancel a `PENDING`/`QUEUED` email |
 | `POST` | `/api/emails/preview-score` | deliverability score without saving |
 | `GET` | `/api/mailboxes` | mailboxes + today's warmup usage |
@@ -609,6 +611,11 @@ Details worth calling out:
   behind browsers. Deliberately light-touch: a heavily branded wrapper on cold outreach reads as
   bulk mail. See [`emailTemplate.ts`](backend/src/lib/emailTemplate.ts).
 - **Filtering.** A debounced search over recipient and subject, backed by the API's `?q=`.
+- **Reschedule and duplicate.** Both live in the detail drawer. Rescheduling calls BullMQ's
+  `changeDelay` on the existing delayed job rather than cancel-and-recreate, so the job keeps its
+  identity and attempt history — and the move lands in the timeline as a second `QUEUED` event
+  with the old and new delays. Duplicate re-opens the composer pre-filled, with a fresh send time
+  so copying an old email cannot copy a time in the past.
 - **Caching.** The build splits vendor (83KB gzip, changes on dependency bumps) from app
   code (13KB gzip, changes constantly), so a redeploy only invalidates the small chunk.
 
@@ -752,9 +759,9 @@ cd backend && npx prisma migrate reset --force && npm run seed
 
 ## Deploying
 
-Full free-tier walkthrough — Render + Vercel + Aiven MySQL — in
-[`DEPLOYMENT.md`](DEPLOYMENT.md), with a [`render.yaml`](render.yaml) blueprint and
-[`frontend/vercel.json`](frontend/vercel.json) already in the repo.
+[`HOSTING.md`](HOSTING.md) is the 20-minute copy-paste path; [`DEPLOYMENT.md`](DEPLOYMENT.md) is
+the same ground with troubleshooting and the reasoning. A [`render.yaml`](render.yaml) blueprint
+and [`frontend/vercel.json`](frontend/vercel.json) are already in the repo.
 
 Two things are worth knowing before you read it:
 

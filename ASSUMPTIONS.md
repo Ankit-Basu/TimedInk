@@ -182,7 +182,7 @@ reputation, none of which are meaningful against Ethereal.
 | Not built | Why / what it would take |
 | --- | --- |
 | **WebSocket/SSE live updates** | The dashboard polls every 4s. Noted in a comment in `DashboardPage.tsx`. The worker already writes an `EmailEvent` per transition, which is exactly the stream you would publish. |
-| **Editing a scheduled email** | Only create and cancel. Editing means changing the delay, which means `job.changeDelay()` plus revalidation — cancel-and-recreate covers the need. |
+| **Editing an email's content** | The send *time* is editable (`PATCH /api/emails/:id/schedule`, via BullMQ's `changeDelay`). Editing the body or recipient is not — that needs re-scoring, re-rendering the HTML part, and a rule for what happens mid-flight. Duplicate-and-cancel covers the need. |
 | **Mailbox CRUD in the UI** | `POST /api/mailboxes` exists and is tested by hand; the UI only lists mailboxes and advances warmup. The seed creates two, which is what the demo needs. |
 | **Bulk actions** | No multi-select cancel. |
 | **Refresh tokens / password reset / email verification** | Out of scope here; register + login only. |
