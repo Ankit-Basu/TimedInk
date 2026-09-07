@@ -24,14 +24,6 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 
 **[Live app](https://timed-ink.vercel.app)** · **[API](https://timedink.onrender.com/health)** · **[Demo script](DEMO_SCRIPT.md)** · **[Assumptions](ASSUMPTIONS.md)**
 
-<sub>Sign in with <code>demo@timedink.dev</code> / <code>demo1234</code>. Free tier — the first
-request can take ~50s while the instance wakes.</sub>
-
-<br />
-
-**MySQL is the source of truth. Redis is a derived index that can be rebuilt at any moment.**<br />
-<sub>Every design decision below follows from that one sentence.</sub>
-
 <br />
 
 </div>
