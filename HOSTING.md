@@ -38,7 +38,12 @@ minutes.
 ## Step 1 · MySQL (5 min)
 
 1. <https://aiven.io> → sign up → **Create service → MySQL → Free plan**.
-2. Any US region. Name it `timedink-mysql`. Create, wait ~4 minutes.
+2. Leave the auto-assigned cloud (it will pick one near you). Name it `timedink-mysql`.
+   Create, wait ~4 minutes.
+
+   **Note which region it lands in** — you want Render in the same part of the world in step 3.
+   Auto-assigned *Asia Pacific* pairs with Render's **Singapore**; a US region pairs with
+   **Oregon**. Split them across continents and every query pays ~200ms of round trip.
 3. Copy the **Service URI** and append `?ssl-mode=REQUIRED`:
 
 ```

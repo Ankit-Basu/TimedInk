@@ -57,13 +57,15 @@ differs from local.
 
 ## 1 · MySQL on Aiven
 
-Render has no MySQL, so the database comes from elsewhere. Aiven's free plan gives 1 CPU / 1 GB /
-5 GB storage, which is far more than this needs.
+Render has no MySQL, so the database comes from elsewhere. Aiven's free plan gives 1 CPU / 1 GB
+RAM / 1 GB storage — far more than this needs, which stores a few KB per email.
 
 1. Sign up at **<https://aiven.io>** (no card on the free plan).
 2. **Create service → MySQL**.
-3. Pick the **Free** plan and a region close to where you will put Render (Render's free web
-   services default to **Oregon, US West** — pick a US region for both).
+3. Pick the **Free** plan. Aiven auto-assigns a cloud near you; whatever it picks, put Render in
+   the same part of the world in step 3 — *Asia Pacific* pairs with Render's **Singapore**, a US
+   region with **Oregon**. Split across continents and every query pays ~200ms of round trip,
+   which is felt on every dashboard poll.
 4. Name it `timedink-mysql`. Create, then wait — provisioning takes 3–5 minutes.
 5. When it goes green, open the service and copy the **Service URI**. It looks like:
 
@@ -112,7 +114,7 @@ Keep this to hand — it becomes `DATABASE_URL`.
 | Setting | Value |
 | --- | --- |
 | Name | `timedink-api` |
-| Region | same as the Key Value instance |
+| Region | **match your Aiven region** (Asia Pacific → Singapore, US → Oregon) |
 | Branch | `main` |
 | Root Directory | `backend` |
 | Runtime | Node |
