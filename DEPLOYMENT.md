@@ -279,6 +279,42 @@ Then open the Vercel URL, sign in, and schedule something a minute out. Watch th
 
 ---
 
+---
+
+## Known limit: Render's free tier blocks outbound SMTP
+
+The deployed instance does everything **except the final SMTP hop**. Scheduling, the queue, the
+inline worker, retries, reconciliation and the whole UI work; the send itself times out.
+
+Evidence it is a port block rather than a bug: the same instance reaches Aiven MySQL on port
+22852 without trouble, while `smtp.ethereal.email:587` times out. Render blocks outbound SMTP
+ports on free plans to stop the platform being used to send spam — a reasonable policy that
+happens to be inconvenient here.
+
+A live email on the deployed instance therefore ends as:
+
+```
+CREATED -> QUEUED -> SENDING -> FAILED -> SENDING -> FAILED -> SENDING -> FAILED
+attempts: 3      lastError: Connection timeout
+```
+
+Which is, incidentally, the retry-and-backoff path working exactly as designed against a genuine
+network failure.
+
+**Options, in the order I would consider them:**
+
+1. **Leave it, and record the demo locally.** For a take-home this is the right call. The
+   deployed link proves the UI and the scheduling pipeline; the video proves delivery. Say so
+   plainly rather than hoping nobody clicks.
+2. **Use a relay that offers port 2525.** Brevo (`smtp-relay.brevo.com:2525`, 300/day free),
+   SendGrid and Mailtrap all publish 2525 precisely because 25/465/587 are widely blocked. Set
+   `SMTP_HOST`, `SMTP_PORT=2525`, `SMTP_USER`, `SMTP_PASS` and it should go through — untested
+   from Render here, so verify before relying on it.
+3. **Pay for a Render instance.** Outbound SMTP is available on paid plans.
+
+Ethereal itself only listens on 587, so option 2 means leaving Ethereal behind for the deployed
+instance. Local development is unaffected.
+
 ## Production settings that differ from local
 
 | Variable | Local | Deployed | Why |

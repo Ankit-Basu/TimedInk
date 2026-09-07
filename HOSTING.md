@@ -138,6 +138,23 @@ Then open the Vercel URL and sign in with `demo@timedink.dev` / `demo1234`.
 
 ---
 
+## One thing that will not work on Render free
+
+**Outbound SMTP is blocked.** Scheduling, the queue, the worker, retries and the UI all work on
+the deployed instance — only the send times out. The same instance talks to Aiven MySQL on port
+22852 happily, so it is a port-specific block, not a bug: Render blocks SMTP ports on free plans
+to stop spam.
+
+A send there ends `SENDING -> FAILED` three times with `Connection timeout`, which is the retry
+path behaving correctly against a real failure.
+
+For a take-home, leave it and record the demo locally — the deployed link proves the UI and the
+pipeline, the video proves delivery. If you do want the deployed instance sending, use a relay
+that offers **port 2525** (Brevo, SendGrid and Mailtrap all do, because 587 is widely blocked);
+Ethereal only listens on 587. Details in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+---
+
 ## Record the demo locally, not against this
 
 Cold starts take ~50 seconds. A rate-limiting demo is not compelling when the service just spent

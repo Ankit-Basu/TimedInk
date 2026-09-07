@@ -189,6 +189,7 @@ reputation, none of which are meaningful against Ethereal.
 | **Frontend tests** | All 58 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
 | **CI pipeline** | No GitHub Actions workflow. `npm test` and `npm run typecheck` are hermetic and would drop straight into one. |
 | **Dockerfiles for the app itself** | Compose runs MySQL + Redis only; the app runs on the host for fast reloads and readable stack traces. Production would add multi-stage Dockerfiles for API and worker. |
+| **Sending from the deployed instance** | Render's free tier blocks outbound SMTP ports, so the hosted instance schedules and queues correctly but cannot complete a send. Documented in `DEPLOYMENT.md` with the port-2525 workaround. Local development and the demo video are unaffected. |
 | **Observability** | Structured pino logs only. No metrics, no tracing. Queue depth, send latency and failure rate are the three you would want first. |
 | **Migrations beyond the initial one** | One `init` migration. |
 
@@ -336,6 +337,8 @@ Assumed but **not** directly exercised:
   `FOLLOWUP_CHECK_INTERVAL_MS` to something small.
 - ⚠️ **Multi-worker operation.** The limiter and warmup bucket are Redis-coordinated and designed
   for it, but only one worker process was run.
-- ⚠️ **Retry/backoff on a real transient failure.** The retry path is implemented and the final
-  attempt correctly lands in `FAILED`, but no SMTP outage was simulated to watch all three
-  attempts and their backoff.
+- ✅ **Retry/backoff against a real failure** — verified unintentionally, on the deployed Render
+  instance, where outbound SMTP is blocked. A send produced
+  `SENDING → FAILED` three times with `attempts: 3` and `lastError: "Connection timeout"`,
+  then stopped. Exactly the designed behaviour, against a genuine network failure rather than a
+  simulated one.
