@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui';
 import EmailTable from '../features/emails/EmailTable';
 import ComposeModal from '../features/emails/ComposeModal';
+import type { ComposeDraft } from '../features/emails/ComposeModal';
 import EmailDetailDrawer from '../features/emails/EmailDetailDrawer';
 import MailboxPanel from '../features/mailboxes/MailboxPanel';
 import Logo from '../components/Logo';
@@ -112,6 +113,7 @@ export default function DashboardPage() {
   const [page, setPage] = useState(1);
   const [composeOpen, setComposeOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ComposeDraft | null>(null);
   const [search, setSearch] = useState('');
   // Only the settled value reaches the query key, so typing does not fire a
   // request per keystroke.
@@ -158,6 +160,7 @@ export default function DashboardPage() {
       const el = document.activeElement;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
       e.preventDefault();
+      setDraft(null);
       setComposeOpen(true);
     };
     window.addEventListener('keydown', onKey);
@@ -191,7 +194,12 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3">
             <span className="label hidden sm:inline">{user?.email}</span>
-            <Button onClick={() => setComposeOpen(true)}>
+            <Button
+              onClick={() => {
+                setDraft(null);
+                setComposeOpen(true);
+              }}
+            >
               New email
               <kbd className="mono ml-1 hidden rounded-sm border border-ink/25 px-1 text-[10px] font-normal sm:inline">
                 c
@@ -326,7 +334,14 @@ export default function DashboardPage() {
                         Clear filter
                       </Button>
                     ) : activeTab.id === 'scheduled' ? (
-                      <Button onClick={() => setComposeOpen(true)}>Schedule an email</Button>
+                      <Button
+                        onClick={() => {
+                          setDraft(null);
+                          setComposeOpen(true);
+                        }}
+                      >
+                        Schedule an email
+                      </Button>
                     ) : undefined
                   }
                 />
@@ -390,8 +405,22 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} />
-      <EmailDetailDrawer emailId={selectedId} onClose={() => setSelectedId(null)} />
+      <ComposeModal open={composeOpen} draft={draft} onClose={() => setComposeOpen(false)} />
+      <EmailDetailDrawer
+        emailId={selectedId}
+        onClose={() => setSelectedId(null)}
+        onDuplicate={(email) => {
+          setDraft({
+            to: email.to,
+            cc: email.cc ?? '',
+            subject: email.subject,
+            body: email.bodyText,
+            followUpAfterHours: email.followUpAfterHours ? String(email.followUpAfterHours) : '',
+          });
+          setSelectedId(null);
+          setComposeOpen(true);
+        }}
+      />
     </div>
   );
 }

@@ -8,14 +8,25 @@ import { useFocusTrap } from '../../lib/useFocusTrap';
 import { Alert, Button, Field, Input, Textarea } from '../../components/ui';
 import type { DeliverabilityPreview } from '../../lib/types';
 
+/** Pre-filled fields, used by "Duplicate" on an existing email. */
+export interface ComposeDraft {
+  to: string;
+  cc: string;
+  subject: string;
+  body: string;
+  followUpAfterHours: string;
+}
+
 interface ComposeModalProps {
   open: boolean;
   onClose: () => void;
+  /** When present the form opens pre-filled instead of blank. */
+  draft?: ComposeDraft | null;
 }
 
 const DEFAULT_LEAD_MINUTES = 2;
 
-export default function ComposeModal({ open, onClose }: ComposeModalProps) {
+export default function ComposeModal({ open, onClose, draft }: ComposeModalProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const timezone = useMemo(() => browserTimezone(), []);
@@ -33,19 +44,20 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
   const [followUpAfterHours, setFollowUpAfterHours] = useState('');
   const [preview, setPreview] = useState<DeliverabilityPreview | null>(null);
 
-  // Reset to a clean form (and a fresh default time) each time it opens.
+  // Reset each time it opens — blank, or pre-filled from a draft. The send time
+  // is always fresh: copying an old email should not copy a time in the past.
   useEffect(() => {
     if (!open) return;
-    setTo('');
-    setCc('');
-    setSubject('');
-    setBody('');
+    setTo(draft?.to ?? '');
+    setCc(draft?.cc ?? '');
+    setSubject(draft?.subject ?? '');
+    setBody(draft?.body ?? '');
     setScheduledAtLocal(datetimeLocalValue(DEFAULT_LEAD_MINUTES));
-    setFollowUpAfterHours('');
+    setFollowUpAfterHours(draft?.followUpAfterHours ?? '');
     setPreview(null);
     // Land the caret in the first field rather than making the user click.
     requestAnimationFrame(() => firstFieldRef.current?.focus());
-  }, [open]);
+  }, [open, draft]);
 
   useEffect(() => {
     if (!open) return;
@@ -146,7 +158,7 @@ export default function ComposeModal({ open, onClose }: ComposeModalProps) {
       <div ref={dialogRef} className="mx-auto w-full max-w-2xl border border-rule-strong bg-surface">
         <div className="flex items-center justify-between border-b border-rule px-6 py-4">
           <h2 id="compose-title" className="display text-xl">
-            Schedule an email
+            {draft ? 'Duplicate email' : 'Schedule an email'}
           </h2>
           <button
             type="button"
