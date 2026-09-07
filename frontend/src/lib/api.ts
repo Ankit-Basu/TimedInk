@@ -13,10 +13,21 @@ import type {
 /**
  * Thin typed wrapper over fetch.
  *
- * An empty base URL means "same origin", which is what the Vite dev proxy
- * gives us — so there is no CORS preflight on every dashboard poll.
+ * Every request is same-origin. Which server actually answers `/api/*` is a
+ * deployment concern, decided by a proxy rather than by the bundle:
+ *
+ *   local  — `server.proxy` in vite.config.ts
+ *   hosted — the `/api/:path*` rewrite in vercel.json
+ *
+ * There is deliberately no VITE_API_BASE_URL. It existed as an escape hatch and
+ * turned out to be a trap: Vite inlines VITE_* at build time, so a value set
+ * after a deploy silently ships stale, and a typo'd host returns 404 with no
+ * CORS headers — which the browser reports as a CORS failure, sending you after
+ * entirely the wrong problem. Same-origin has neither failure mode, and it
+ * keeps the CORS allowlist out of the picture for the browser path. To point at
+ * a different API, change the proxy destination, which is where deployment
+ * topology belongs.
  */
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
 const TOKEN_STORAGE_KEY = 'timedink.token';
 
@@ -83,7 +94,7 @@ async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    response = await fetch(path, {
       ...init,
       headers: {
         ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
@@ -93,18 +104,15 @@ async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
   } catch {
     /*
-      Network-level failure: the API is down, DNS failed, or the browser blocked
-      it (CORS, mixed content). Name the URL that was actually attempted — a
-      bare "could not reach the API" sent a real debugging session hunting CORS
-      when the true cause was VITE_API_BASE_URL pointing at the wrong host.
-      Whatever the browser refused, the URL is the first thing worth seeing.
+      Network-level failure: the proxy is misconfigured, or the API is down or
+      still waking. Name the path that was attempted — a bare "could not reach
+      the API" once sent a whole debugging session after CORS when the real
+      cause was a wrong host, so whatever failed, say what was asked for.
     */
     throw new ApiError(
       0,
       'NETWORK_ERROR',
-      BASE_URL
-        ? `Could not reach the API at ${BASE_URL}. Check VITE_API_BASE_URL, or whether the backend is running.`
-        : 'Could not reach the API. Is the backend running?',
+      `Could not reach ${path}. The API may be starting up — a free-tier instance takes about a minute to wake.`,
     );
   }
 

@@ -200,22 +200,23 @@ DATABASE_URL="<your Aiven URI>" npm run seed
 2. Vercel will detect Vite. Set **Root Directory** to `frontend`.
 3. Leave build command and output directory alone — `frontend/vercel.json` already declares them,
    along with the SPA fallback that stops `/dashboard` 404ing on a hard refresh.
-4. Add one **Environment Variable**:
-
-   | Key | Value |
-   | --- | --- |
-   | `VITE_API_BASE_URL` | `https://timedink.onrender.com` |
-
-   Vite inlines this at **build** time, so changing it later needs a redeploy, not just a restart.
+4. **Do not add any environment variables.** `frontend/vercel.json` proxies `/api/*` to the
+   Render service, so the browser only ever talks to its own origin.
 
 5. **Deploy.**
 
----
+> There is deliberately no `VITE_API_BASE_URL`. Vite inlines `VITE_*` at build time, so a value
+> set after the first deploy silently ships stale — and a typo in the host returns 404 with no
+> CORS headers, which the browser reports as a *CORS* error and sends you after the wrong problem
+> entirely. Same-origin has neither failure mode. To point the app at a different API, change the
+> proxy destination in `vercel.json`, which is where deployment topology belongs.
 
 ## 5 · Connect the two
 
-Back in Render, set `CORS_ORIGIN` to your Vercel domain — no trailing slash, comma-separate if you
-want preview deployments too:
+Because the browser goes through Vercel's proxy, it never makes a cross-origin request and
+`CORS_ORIGIN` is not needed for the app to work. Set it anyway if you want to call the API
+directly from other origins (curl, Postman and server-to-server calls send no `Origin` header and
+are unaffected either way):
 
 ```
 https://timed-ink.vercel.app
@@ -223,23 +224,6 @@ https://timed-ink.vercel.app
 
 Save; Render redeploys. Auth is a bearer token rather than a cookie, so there is no `SameSite` or
 credentialed-CORS complication — the origin allowlist is the whole of it.
-
-<details>
-<summary><b>Alternative: set VITE_API_BASE_URL and configure CORS instead</b></summary>
-
-Instead of `VITE_API_BASE_URL`, add a rewrite to `frontend/vercel.json` **above** the SPA
-fallback:
-
-```json
-{
-  "source": "/api/:path*",
-  "destination": "https://timedink.onrender.com/api/:path*"
-}
-```
-
-Leave `VITE_API_BASE_URL` unset and the browser stays same-origin, exactly as it does behind the
-Vite dev proxy locally. Costs an extra network hop; buys you no CORS configuration at all.
-</details>
 
 ---
 

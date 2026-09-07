@@ -108,14 +108,15 @@ That is genuinely all. `frontend/vercel.json` proxies `/api/*` to the Render ser
 browser only ever talks to its own origin — no environment variable, and no `CORS_ORIGIN` to
 keep in sync.
 
-> **Do not set `VITE_API_BASE_URL`.** If it is set it wins, and the proxy is bypassed. It also
-> has two traps: Vite inlines `VITE_*` at **build** time, so setting it after a deploy silently
-> ships the old value; and any typo in the host produces a CORS error in the console, which sends
-> you hunting the wrong problem entirely. If the variable is already set in Vercel, **delete it
-> and redeploy** — Settings → Environment Variables → remove → Deployments → Redeploy.
+> **Add no environment variables.** The app has no `VITE_API_BASE_URL` — every request is
+> same-origin and the proxy decides which server answers. That is deliberate: Vite inlines
+> `VITE_*` at build time, so a value set after a deploy silently ships stale, and a typo'd host
+> returns 404 with no CORS headers, which the browser reports as a *CORS* error and sends you
+> chasing the wrong thing. To point at a different API, change the proxy destination in
+> `vercel.json`.
 >
-> If you do want the browser talking to Render directly, set it to your exact service URL
-> **before** the first build and add the Vercel origin to `CORS_ORIGIN` on Render.
+> If you set that variable on an earlier attempt, delete it — Settings → Environment Variables →
+> remove. It is ignored now, but leaving it is misleading.
 >
 > The proxy destination is hardcoded to `https://timedink.onrender.com` — change it in
 > `vercel.json` if your API URL differs.

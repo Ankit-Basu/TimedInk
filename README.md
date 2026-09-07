@@ -221,8 +221,9 @@ cd frontend && npm install && npm run dev     # http://localhost:5173
 ```
 
 The Vite dev server proxies `/api` to `localhost:4000`, so the browser stays on a single origin
-and there is no CORS preflight on every dashboard poll. Set `VITE_API_BASE_URL` if you'd rather
-the browser hit the API directly.
+and there is no CORS preflight on every dashboard poll. Deployed, `vercel.json` does the same job
+with an `/api/*` rewrite — so which server answers is a proxy concern, never something baked into
+the bundle.
 
 ---
 
@@ -673,7 +674,7 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 | `FOLLOWUP_CHECK_INTERVAL_MS` | `60000` | follow-up sweep cadence |
 | `BULL_BOARD_ENABLED` | `true` | **unauthenticated** — keep `false` in production |
 | `LOG_PRETTY` | `true` | human-readable logs (`false` for JSON) |
-| `VITE_POLL_INTERVAL_MS` | `4000` | dashboard refresh cadence |
+| `VITE_POLL_INTERVAL_MS` | `4000` | dashboard refresh cadence (the only frontend variable) |
 
 ---
 
