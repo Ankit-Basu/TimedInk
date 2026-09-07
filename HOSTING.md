@@ -87,8 +87,8 @@ runs inside the web process. `BULL_BOARD_ENABLED=false` matters more — Bull Bo
 Deploy. When it finishes, copy the URL and add two more variables, then let it redeploy:
 
 ```
-APP_BASE_URL = https://timedink-api.onrender.com     ← your actual URL
-CORS_ORIGIN  = https://timedink.vercel.app           ← fill in after step 4
+APP_BASE_URL = https://timedink.onrender.com     ← your actual URL
+CORS_ORIGIN  = https://timed-ink.vercel.app           ← fill in after step 4
 ```
 
 Then seed the demo user from your machine (free tier has no shell):
@@ -101,22 +101,28 @@ DATABASE_URL="<your Aiven URI>" npm run seed
 ## Step 4 · Frontend on Vercel (3 min)
 
 1. <https://vercel.com> → **Add New → Project** → import the same repo.
-2. **Root Directory: `frontend`**. Leave everything else — `frontend/vercel.json` handles it.
-3. Add one environment variable:
+2. **Root Directory: `frontend`**. Leave everything else alone.
+3. Deploy.
 
-```
-VITE_API_BASE_URL = https://timedink-api.onrender.com
-```
+That is genuinely all. `frontend/vercel.json` proxies `/api/*` to the Render service, so the
+browser only ever talks to its own origin — no environment variable, and no `CORS_ORIGIN` to
+keep in sync.
 
-4. Deploy. Copy the resulting URL back into Render's `CORS_ORIGIN` (step 3).
-
-Vite inlines `VITE_*` at **build** time, so changing it later needs a redeploy, not a restart.
+> **Why not `VITE_API_BASE_URL`?** It works, but Vite inlines `VITE_*` at **build** time. Set it
+> after the first deploy and the shipped bundle still carries the old value, the SPA calls
+> *itself* at `/api/...`, and you get `405 Method Not Allowed` surfaced as "Could not reach the
+> API". Easy to do and confusing to diagnose. The proxy has no such ordering trap. If you do
+> prefer the direct route, set the variable **before** the first build and add your Vercel origin
+> to `CORS_ORIGIN` on Render.
+>
+> The proxy destination is hardcoded to `https://timedink.onrender.com` — change it in
+> `vercel.json` if your API URL differs.
 
 ## Step 5 · Keep it awake (2 min)
 
 A free Render service sleeps after ~15 minutes, and a sleeping scheduler sends nothing.
 
-<https://cron-job.org> → new job → `https://timedink-api.onrender.com/health` every **10 minutes**.
+<https://cron-job.org> → new job → `https://timedink.onrender.com/health` every **10 minutes**.
 
 The boot reconciler means nothing is *lost* while asleep — the backlog replays on wake — but it
 arrives late. The ping avoids that entirely.
@@ -126,7 +132,7 @@ arrives late. The ping avoids that entirely.
 ## Verify
 
 ```bash
-curl https://timedink-api.onrender.com/health
+curl https://timedink.onrender.com/health
 ```
 
 Then open the Vercel URL and sign in with `demo@timedink.dev` / `demo1234`.

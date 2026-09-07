@@ -104,6 +104,12 @@ Keep this to hand — it becomes `DATABASE_URL`.
 > The free plan has **no persistence** — a restart empties it. This app is fine with that: MySQL
 > is the source of truth and the reconciler rebuilds the queue on every boot. That is not a
 > rationalisation, it is the same property the `FLUSHALL` test in the README exercises.
+>
+> BullMQ will also log `IMPORTANT! Eviction policy is allkeys-lru. It should be "noeviction"` on
+> connect. It is right to warn: under memory pressure Redis may evict job keys, and on most
+> queues that means silently losing work. Here it is survivable for the same reason — the next
+> boot replays the backlog from MySQL. Render's free plan does not expose `maxmemory-policy`; a
+> paid instance does.
 
 ---
 
@@ -150,7 +156,7 @@ Add these under **Environment**:
 | `WORKER_INLINE` | `true` |
 | `LOG_PRETTY` | `false` |
 | `BULL_BOARD_ENABLED` | `false` |
-| `APP_BASE_URL` | `https://timedink-api.onrender.com` *(fill in after the first deploy)* |
+| `APP_BASE_URL` | `https://timedink.onrender.com` *(fill in after the first deploy)* |
 | `CORS_ORIGIN` | your Vercel URL — set this in [step 5](#5--connect-the-two) |
 | `ETHEREAL_USER` / `ETHEREAL_PASS` | leave **blank** on the first deploy |
 
@@ -198,7 +204,7 @@ DATABASE_URL="<your Aiven URI>" npm run seed
 
    | Key | Value |
    | --- | --- |
-   | `VITE_API_BASE_URL` | `https://timedink-api.onrender.com` |
+   | `VITE_API_BASE_URL` | `https://timedink.onrender.com` |
 
    Vite inlines this at **build** time, so changing it later needs a redeploy, not just a restart.
 
@@ -219,7 +225,7 @@ Save; Render redeploys. Auth is a bearer token rather than a cookie, so there is
 credentialed-CORS complication — the origin allowlist is the whole of it.
 
 <details>
-<summary><b>Alternative: proxy through Vercel and skip CORS entirely</b></summary>
+<summary><b>Alternative: set VITE_API_BASE_URL and configure CORS instead</b></summary>
 
 Instead of `VITE_API_BASE_URL`, add a rewrite to `frontend/vercel.json` **above** the SPA
 fallback:
@@ -227,7 +233,7 @@ fallback:
 ```json
 {
   "source": "/api/:path*",
-  "destination": "https://timedink-api.onrender.com/api/:path*"
+  "destination": "https://timedink.onrender.com/api/:path*"
 }
 ```
 
@@ -243,7 +249,7 @@ Without this, emails scheduled while the instance sleeps are delivered late — 
 than on time.
 
 1. Go to **<https://cron-job.org>** (free) or UptimeRobot.
-2. Create a job hitting `https://timedink-api.onrender.com/health` every **10 minutes**.
+2. Create a job hitting `https://timedink.onrender.com/health` every **10 minutes**.
 3. Render's sleep timer is ~15 minutes of no traffic, so a 10-minute ping keeps it up permanently.
 
 `/health` is deliberately excluded from request logging, so this will not fill your log with noise.
@@ -257,10 +263,10 @@ than on time.
 
 ```bash
 # 1 — health
-curl https://timedink-api.onrender.com/health
+curl https://timedink.onrender.com/health
 
 # 2 — auth against the hosted database
-curl -s -X POST https://timedink-api.onrender.com/api/auth/login \
+curl -s -X POST https://timedink.onrender.com/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"demo@timedink.dev","password":"demo1234"}'
 ```
