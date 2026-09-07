@@ -64,7 +64,7 @@ will use next. Copy the **Internal Key Value URL** (`redis://red-xxxx:6379`).
 | Field | Value |
 | --- | --- |
 | Root Directory | `backend` |
-| Build Command | `npm ci && npx prisma generate && npm run build` |
+| Build Command | `npm ci --include=dev && npx prisma generate && npm run build` |
 | Start Command | `npx prisma migrate deploy && node dist/server.js` |
 | Instance Type | **Free** |
 | Health Check Path | `/health` |

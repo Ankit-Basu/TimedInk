@@ -19,8 +19,10 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    # `prisma generate` must run before tsc: the build imports the generated client.
-    buildCommand: npm ci && npx prisma generate && npm run build
+    # --include=dev is required: NODE_ENV=production makes npm ci drop
+    # devDependencies, and that is where @types/* live. `prisma generate`
+    # must run before tsc, because the build imports the generated client.
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
     # Migrations run at start, not at build — the build step has no database.
     startCommand: npx prisma migrate deploy && node dist/server.js
     healthCheckPath: /health

@@ -117,14 +117,18 @@ Keep this to hand — it becomes `DATABASE_URL`.
 | Region | **match your Aiven region** (Asia Pacific → Singapore, US → Oregon) |
 | Branch | `main` |
 | Root Directory | `backend` |
-| Runtime | Node |
-| Build Command | `npm ci && npx prisma generate && npm run build` |
+| Runtime | Node (pinned to 22 by `backend/.node-version`) |
+| Build Command | `npm ci --include=dev && npx prisma generate && npm run build` |
 | Start Command | `npx prisma migrate deploy && node dist/server.js` |
 | Instance Type | **Free** |
 | Health Check Path | `/health` |
 
 Two details that matter:
 
+- **`--include=dev` is required.** You set `NODE_ENV=production`, and `npm ci` honours that by
+  omitting devDependencies — which is where `@types/*` live. The build fails with
+  `TS2688: Cannot find type definition file for 'node'`. Confusingly `tsc` itself still runs,
+  because TypeScript arrives transitively through Prisma; only the type packages go missing.
 - `prisma generate` must run **before** `npm run build`, because the TypeScript build imports the
   generated client.
 - `prisma migrate deploy` runs at **start**, not build — Render's build step has no database
@@ -285,6 +289,11 @@ Then open the Vercel URL, sign in, and schedule something a minute out. Watch th
 ---
 
 ## Troubleshooting
+
+**Build fails with `TS2688: Cannot find type definition file for 'node'`.** The build command is
+missing `--include=dev`. With `NODE_ENV=production` set, `npm ci` drops devDependencies, and every
+`@types/*` package lives there. TypeScript itself still installs — it arrives transitively through
+Prisma — so `tsc` runs and then fails on the missing types, which makes the cause look unrelated.
 
 **Build fails on `@prisma/client did not initialize yet`.** `prisma generate` is missing from the
 build command, or runs after `npm run build`.
