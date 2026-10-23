@@ -63,6 +63,10 @@ services:
         sync: false
       - key: ETHEREAL_PASS
         sync: false
+      # Optional. Add the Vercel URL as an authorised JavaScript origin on the
+      # OAuth client, or Google rejects the button with "origin_mismatch".
+      - key: GOOGLE_CLIENT_ID
+        sync: false
 
   # Render calls this "Key Value" in the dashboard; the blueprint keyword is
   # still `redis`. The free plan has no persistence — which this app tolerates,

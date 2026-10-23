@@ -54,6 +54,27 @@ each load-bearing for a bonus layer:
 | `followUpAfterHours` | The brief's "follow up after N hours if unopened" field has to live somewhere. |
 | `followUpQueuedAt` | Idempotency guard so two sweepers cannot both queue a follow-up. |
 | `openedAt`, `sentAt` | Denormalised from the `OPENED`/`SENT` events so the follow-up sweeper is one indexed query rather than a join per row. The events remain the audit record. |
+| `batchId`, `hourlyLimit` | A CSV upload becomes one row per recipient sharing a `batchId`; each row carries the request's own hourly cap so the worker can enforce it per batch at send time. |
+
+`User` gained `googleId` (unique) and `avatarUrl` for Google sign-in, and `passwordHash` became
+nullable, since an account created through Google has no password. A Google sign-in whose verified
+email matches an existing password account links to it rather than creating a duplicate; an
+unverified Google email is refused, so linking cannot be used to claim someone else's account.
+
+### 1.5 Bulk recipients are parsed in the browser — **Deliberate**
+
+The CSV never reaches the server. The compose form extracts every address-shaped token from the
+file (any column, any delimiter, or one per line), de-duplicates it, and posts a plain JSON list to
+`POST /api/emails/bulk`, which re-validates each address with zod and de-duplicates again. That
+keeps multipart parsing and file storage out of the API, and a lead list with names and companies
+in it never leaves the operator's machine. The cap is `BULK_MAX_RECIPIENTS` (1,000 by default).
+
+### 1.6 Hourly limits are fixed UTC windows, not sliding — **Simplification**
+
+Counters bucket by UTC hour (`ratelimit:hour:<scope>:<id>:2026-10-23T14`), so 50 sends at 14:59
+and 50 more at 15:00 are both allowed. A sliding window (a sorted set of send times per scope) would
+remove that edge, at the cost of a ZADD + ZREMRANGEBYSCORE per send. For pacing outreach the fixed
+window is the usual trade, and it matches how providers usually state their limits.
 
 ---
 
@@ -186,48 +207,51 @@ reputation, none of which are meaningful against Ethereal.
 | **Mailbox CRUD in the UI** | `POST /api/mailboxes` exists and is tested by hand; the UI only lists mailboxes and advances warmup. The seed creates two, which is what the demo needs. |
 | **Bulk actions** | No multi-select cancel. |
 | **Refresh tokens / password reset / email verification** | Out of scope here; register + login only. |
-| **Frontend tests** | All 58 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
+| **Frontend tests** | All 73 tests are backend. With the time available, testing the scheduling/reconciliation/limiter logic was worth more than testing that a React table renders. Vitest + Testing Library would slot in with no config change. |
 | **CI pipeline** | No GitHub Actions workflow. `npm test` and `npm run typecheck` are hermetic and would drop straight into one. |
 | **Dockerfiles for the app itself** | Compose runs MySQL + Redis only; the app runs on the host for fast reloads and readable stack traces. Production would add multi-stage Dockerfiles for API and worker. |
 | **Sending from the deployed instance** | Render's free tier blocks outbound SMTP ports, so the hosted instance schedules and queues correctly but cannot complete a send. Documented in `DEPLOYMENT.md` with the port-2525 workaround. Local development and the demo video are unaffected. |
 | **Observability** | Structured pino logs only. No metrics, no tracing. Queue depth, send latency and failure rate are the three you would want first. |
-| **Migrations beyond the initial one** | One `init` migration. |
+| **Down migrations** | Two forward migrations (`init`, then bulk scheduling + Google auth). Prisma does not generate down migrations; rolling back is a new forward migration. |
 
 ---
 
 ## 4a. Interface decisions
 
-### 4a.1 The UI is deliberately plain — **Done**
+### 4a.1 Glass, with the costs managed — **Done**
 
-An earlier pass built this as a glassmorphic dark theme: a WebGL particle field, four levels of
-`backdrop-filter` glass, violet-to-aqua gradients, animated counters, spotlight cards and a
-grain overlay. It was rebuilt flat, and the reasons are worth stating because "less" was the
-harder call:
+The interface is a warm editorial dark theme over React Bits WebGL backgrounds (PrismaticBurst on
+the landing hero, LightRays on the closing section, DarkVeil behind the dashboard), animated with GSAP. An
+earlier glass pass was dropped for reasons that still apply, so this one answers each of them:
 
-- **It fought the data.** This screen exists to answer "what is queued, what went out, what
-  broke". Translucent panels over a drifting gradient reduce text contrast and add motion next
-  to a table that is already updating every four seconds.
-- **It cost real performance.** A 140-particle WebGL canvas plus `backdrop-filter` on every
-  panel keeps the GPU busy continuously, on a dashboard people leave open all day.
-- **One widget was actively dishonest.** The stat cards carried a progress bar whose width was
-  `min(100, value * 8)` — a bar that encoded nothing, filling up as a number grew with no
-  denominator behind it. It has been removed rather than restyled.
+- **Contrast.** Panes are tinted white at low alpha over a near-black canvas, and `ink-3` sits at
+  about 4.6:1 against the darkest pane. The burst lives only in the hero, feathered and darkened
+  behind a gradient, so it never sits directly under table text.
+- **Motion next to live data.** The table animates only when its *set* of rows changes (a new
+  tab, page or search), never on the 4-second poll. Numbers tween from old to new rather than
+  re-animating from zero.
+- **GPU cost.** One shader, rendered at DPR 1, lazy-loaded out of the first chunk, paused when
+  off-screen and stopped entirely under `prefers-reduced-motion`. Every animation is
+  transform/opacity on one shared GSAP ticker.
+- **No decorative data.** Every bar and ring has a real denominator: the throughput ring is this
+  hour's sends over `MAX_EMAILS_PER_HOUR`, read from the API; mailbox bars are today's sends over
+  the warmup cap.
 
-What replaced it is an editorial layout: a warm paper canvas, ink type, hairline rules, one
-amber accent, and a ruled frame around the whole app. `ogl` and `framer-motion` were removed,
-taking the runtime dependency list down to React, React DOM, React Router and TanStack Query.
+Effect components (PrismaticBurst, LightRays, DarkVeil, SpotlightCard, SplitText, ShinyText, Magnet,
+ClickSpark) are vendored
+from React Bits rather than installed, so they are reviewable source in the repo.
 
 ### 4a.2 Three webfonts, deliberately — **Done**
 
-Instrument Serif (display), Inter (UI), JetBrains Mono (labels and figures), from Google Fonts.
+Fraunces (headlines, with an italic accent word), Geist (UI), JetBrains Mono (labels and figures), from Google Fonts.
 An earlier pass ran on the system stack alone; in this layout type *is* the design, so the three
 faces earn their bytes. Each has a full system fallback declared in `index.css`, so a reviewer
 with no network still gets a working, legible app — just a plainer one.
 
-### 4a.3 Light-only, with no theme toggle — **Deliberate**
+### 4a.3 Dark-only, with no theme toggle — **Deliberate**
 
 The palette is defined once as CSS custom properties, so a dark variant is a token swap rather
-than a rewrite, but none is shipped and there is no toggle. Two themes means two sets of contrast
+than a rewrite, but none is shipped and there is no toggle; the burst and veil only read on dark. Two themes means two sets of contrast
 decisions to verify, and only one of them would get demoed.
 
 ### 4a.4 Density over comfort in the table — **Deliberate**
@@ -240,22 +264,19 @@ not a squeezed one — which is not built.
 
 ---
 
-### 4a.5 Accessibility — measured, not assumed — **Done**
+### 4a.5 Accessibility — **Done, with one caveat**
 
-Every text/background pair in the palette was computed against WCAG 2.1 rather than eyeballed,
-and three tokens moved as a result:
+Text tokens were chosen for the dark panes: `ink` and `ink-2` sit well above AA, `ink-3` (labels,
+hints, relative times) at about 4.6:1 against the darkest pane, and the status hues were lifted
+until they read on dark glass. The caveat is glass itself: a pane's effective background depends
+on what the background is doing behind it, which is why the cards are near-opaque and the burst is kept to the hero,
+faded out before the table.
 
-| Token | Was | Now | Ratio on surface |
-| --- | --- | --- | --- |
-| `ink-3` (labels, hints, relative times) | `#8c8579` | `#766f63` | 3.56 → **4.84** (AA) |
-| `st-cancelled` | `#948d81` | `#766f63` | 3.20 → **4.84** (AA) |
-| form-control boundary | `rule-strong` `#cdc5b4` | `field` `#948c7b` | 1.67 → **3.25** (1.4.11) |
+Animation respects `prefers-reduced-motion` throughout: the shaders pause, Lenis smooth scrolling
+is skipped, GSAP entrances are set straight to their end state, and CSS animations are cut to
+near-zero duration.
 
-`rule` and `rule-strong` stay light *on purpose* — they are decorative dividers, which 1.4.11
-exempts. Only the boundary of an actual control had to move, so the hairline aesthetic survives
-where it does no harm.
-
-Also done in this pass: both dialogs trap Tab and restore focus to their trigger (`aria-modal`
+Also done: both dialogs trap Tab and restore focus to their trigger (`aria-modal`
 was previously a promise the app did not keep), body scroll locks behind them, there is a skip
 link and `<main>` landmarks, toasts are `aria-live`, the document title tracks the route, and
 status is carried by a dot **and** a word so it never depends on hue alone.
@@ -323,7 +344,7 @@ Everything in this list was actually run, not just written:
 - ✅ Modal/drawer focus trap holds after 12 Tabs; focus returns to the trigger; scroll lock released
 - ✅ SMTP pooling measured: 4,367ms → 1,105ms average per send (cold pool 2,487ms)
 - ✅ Search filters the list via the API `?q=`, with a distinct no-match state
-- ✅ `npm test` — 58 passing, no containers required
+- ✅ `npm test` — 73 passing, no containers required
 - ✅ `tsc --noEmit` clean on both backend and frontend under `strict`
 - ✅ `npm run build` clean on both
 

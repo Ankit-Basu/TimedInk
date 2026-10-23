@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Prisma, ScheduledEmail } from '@prisma/client';
 import { env } from '../config/env.js';
 import { childLogger } from '../lib/logger.js';
@@ -36,6 +37,10 @@ export interface CreateScheduledEmailInput {
   followUpAfterHours?: number | null;
   /** Set when this row *is* the follow-up of an earlier email. */
   followUpOfId?: string | null;
+  /** Shared by every row of one bulk request. */
+  batchId?: string | null;
+  /** That bulk request's own hourly cap, enforced by the worker per batch. */
+  hourlyLimit?: number | null;
 }
 
 /**
@@ -160,6 +165,8 @@ export async function createScheduledEmail(
       deliverabilityFlags: deliverability.details as unknown as Prisma.InputJsonValue,
       followUpAfterHours: input.followUpAfterHours ?? null,
       followUpOfId: input.followUpOfId ?? null,
+      batchId: input.batchId ?? null,
+      hourlyLimit: input.hourlyLimit ?? null,
     },
   });
 
@@ -188,6 +195,100 @@ export async function createScheduledEmail(
 
   const fresh = await prisma.scheduledEmail.findUnique({ where: { id: created.id } });
   return fresh ?? created;
+}
+
+/**
+ * Lay out send times for a bulk request.
+ *
+ * Recipient i goes out `delayBetweenMs` after recipient i-1. When an hourly
+ * limit is set and that spacing would overrun it, the schedule rolls into the
+ * next hour instead: recipient i lands in hour floor(i / hourlyLimit) after the
+ * start. The worker enforces the same limit again at send time, so this plan is
+ * what makes the dashboard show honest times, not the only line of defence.
+ *
+ * Pure, so it can be tested without a queue.
+ */
+export function planBulkSchedule(
+  count: number,
+  startAt: Date,
+  delayBetweenMs: number,
+  hourlyLimit?: number | null,
+): Date[] {
+  const HOUR = 60 * 60 * 1000;
+  const start = startAt.getTime();
+  const times: Date[] = [];
+
+  for (let i = 0; i < count; i += 1) {
+    let at = start + i * delayBetweenMs;
+    if (hourlyLimit && hourlyLimit > 0) {
+      const hour = Math.floor(i / hourlyLimit);
+      const indexInHour = i % hourlyLimit;
+      at = Math.max(at, start + hour * HOUR + indexInHour * delayBetweenMs);
+    }
+    times.push(new Date(at));
+  }
+
+  return times;
+}
+
+export interface BulkScheduleInput
+  extends Omit<CreateScheduledEmailInput, 'to' | 'scheduledAt' | 'batchId' | 'hourlyLimit'> {
+  recipients: string[];
+  startAt: Date;
+  delayBetweenMs: number;
+  hourlyLimit?: number | null;
+}
+
+/** How many rows are written and queued at once during a bulk create. */
+const BULK_CONCURRENCY = 8;
+
+/**
+ * Schedule one email per recipient, as a single batch.
+ *
+ * Each row goes through the same createScheduledEmail path as a single send —
+ * same durability ordering, same deterministic job id — so a crash part-way
+ * through leaves every row already written either queued or PENDING for the
+ * reconciler. Nothing about a batch is special to the restart story.
+ */
+export async function createBulkScheduledEmails(
+  input: BulkScheduleInput,
+): Promise<{ batchId: string; emails: ScheduledEmail[] }> {
+  const batchId = randomUUID();
+  const { recipients, startAt, delayBetweenMs, hourlyLimit, ...shared } = input;
+  const times = planBulkSchedule(recipients.length, startAt, delayBetweenMs, hourlyLimit);
+  const emails: ScheduledEmail[] = new Array(recipients.length);
+
+  for (let offset = 0; offset < recipients.length; offset += BULK_CONCURRENCY) {
+    const chunk = recipients.slice(offset, offset + BULK_CONCURRENCY);
+    const created = await Promise.all(
+      chunk.map((to, i) =>
+        createScheduledEmail({
+          ...shared,
+          to,
+          scheduledAt: times[offset + i]!,
+          batchId,
+          hourlyLimit: hourlyLimit ?? null,
+        }),
+      ),
+    );
+    created.forEach((row, i) => {
+      emails[offset + i] = row;
+    });
+  }
+
+  log.info(
+    {
+      batchId,
+      count: recipients.length,
+      firstAt: times[0]?.toISOString(),
+      lastAt: times.at(-1)?.toISOString(),
+      delayBetweenMs,
+      hourlyLimit,
+    },
+    'bulk batch scheduled',
+  );
+
+  return { batchId, emails };
 }
 
 const CANCELLABLE_STATUSES: readonly ScheduledEmail['status'][] = ['PENDING', 'QUEUED'];

@@ -37,13 +37,12 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <div className="flex min-h-full items-center justify-center p-3 sm:p-5">
-        <div className="frame w-full max-w-lg p-10">
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(120%_80%_at_50%_-10%,#141238_0%,#05060f_55%)] p-4">
+        <div className="glass-strong ring-gradient w-full max-w-lg rounded-[28px] p-9">
           <p className="label mb-4">Something broke</p>
-          <h1 className="display text-3xl">
+          <h1 className="headline text-3xl">
             That page hit an error
-            <br />
-            <span className="text-ink-3 italic">and stopped rendering.</span>
+            <span className="display text-gradient block pb-1 text-4xl">and stopped rendering.</span>
           </h1>
 
           <p className="mt-5 text-[13px] leading-relaxed text-ink-2">
@@ -51,7 +50,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             nothing here touches it. Reloading usually clears this.
           </p>
 
-          <pre className="mono mt-5 max-h-40 overflow-auto border-l-2 border-rule-strong bg-surface-2 py-3 pl-4 text-xs whitespace-pre-wrap text-ink-2">
+          <pre className="well mono mt-5 max-h-40 overflow-auto rounded-xl p-3.5 text-xs whitespace-pre-wrap text-ink-2">
             {error.message}
           </pre>
 

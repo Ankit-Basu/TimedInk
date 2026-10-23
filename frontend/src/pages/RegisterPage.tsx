@@ -4,8 +4,10 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
-import { AuthShell } from './LoginPage';
+import GoogleButton from '../components/GoogleButton';
 import { useDocumentTitle } from '../lib/useDocumentTitle';
+import AuthLanding from './AuthLanding';
+import { AuthCard, Divider } from './LoginPage';
 
 export default function RegisterPage() {
   const { user, register } = useAuth();
@@ -45,73 +47,69 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell
-      eyebrow="Create account"
-      headline={
-        <>
-          Every email,
-          <br />
-          <span className="text-ink-3 italic">out the door</span>
-          <br />
-          on time.
-        </>
+    <AuthLanding
+      defaultOpen
+      card={
+        <AuthCard title="Create your account" subtitle="Start scheduling in under a minute.">
+          <GoogleButton />
+          <Divider />
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {error && <Alert>{error}</Alert>}
+
+            <Field label="Name" required>
+              <Input
+                name="name"
+                autoComplete="name"
+                required
+                placeholder="Ava Patel"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+
+            <Field label="Email" required>
+              <Input
+                type="email"
+                name="email"
+                autoComplete="username"
+                required
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              required
+              hint="At least 8 characters."
+              error={passwordTooShort ? 'Password must be at least 8 characters.' : undefined}
+            >
+              <Input
+                type="password"
+                name="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+
+            <Button type="submit" size="lg" loading={submitting} disabled={passwordTooShort} className="w-full">
+              Create account
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-[13px] text-ink-3">
+            Already registered?{' '}
+            <Link to="/login" className="font-medium text-ink underline decoration-white/25 underline-offset-4 hover:decoration-accent">
+              Sign in
+            </Link>
+          </p>
+        </AuthCard>
       }
-    >
-      <form onSubmit={handleSubmit} className="space-y-7" noValidate>
-        {error && <Alert>{error}</Alert>}
-
-        <Field label="Name" required>
-          <Input
-            name="name"
-            autoComplete="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </Field>
-
-        <Field label="Email" required>
-          <Input
-            type="email"
-            name="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-
-        <Field
-          label="Password"
-          required
-          hint="At least 8 characters."
-          error={passwordTooShort ? 'Password must be at least 8 characters.' : undefined}
-        >
-          <Input
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
-
-        <Button type="submit" loading={submitting} disabled={passwordTooShort} className="w-full">
-          Create account
-        </Button>
-      </form>
-
-      <p className="mt-8 text-[13px] text-ink-2">
-        Already registered?{' '}
-        <Link
-          to="/login"
-          className="text-ink underline decoration-rule-strong underline-offset-4 hover:decoration-ink"
-        >
-          Sign in
-        </Link>
-      </p>
-    </AuthShell>
+    />
   );
 }

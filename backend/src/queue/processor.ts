@@ -7,6 +7,7 @@ import { recordEvent } from '../services/events.js';
 import { sendMail } from '../services/mailer.js';
 import { consumeMailboxQuota, effectiveDailyLimit, refundMailboxQuota } from '../services/warmup.js';
 import { injectTrackingPixel } from '../services/tracking.js';
+import { consumeHourly, refundHourly, reserveSendSlot, type HourlyLimit } from '../services/throttle.js';
 import type { SendEmailJobData } from './emailQueue.js';
 
 const log = childLogger('worker');
@@ -22,6 +23,54 @@ export type ProcessOutcome =
 function fromAddress(mailbox: Mailbox | null): string {
   if (!mailbox) return 'TimedInk <no-reply@timedink.local>';
   return `${mailbox.fromName} <${mailbox.fromEmail}>`;
+}
+
+/**
+ * A reserved slot this close is simply waited out in place. Anything further
+ * away puts the job back in the delayed set, so it does not hold a concurrency
+ * slot while it waits.
+ */
+const INLINE_WAIT_MAX_MS = 5_000;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Hold this job until its sender may send again (MIN_SEND_DELAY_MS).
+ *
+ * Throws DelayedError when the slot is far enough away that the job should go
+ * back to sleep instead of waiting inline; BullMQ then re-runs it at the slot.
+ */
+async function waitForSendSlot(
+  job: Job<SendEmailJobData>,
+  token: string | undefined,
+  senderId: string,
+  jobLog: typeof log,
+): Promise<void> {
+  if (env.MIN_SEND_DELAY_MS <= 0) return;
+
+  const reserved = job.data.sendSlotAt;
+  if (reserved !== undefined) {
+    // Woken for a slot reserved before the job was put to sleep: use it rather
+    // than queueing behind everyone again.
+    const { sendSlotAt: _used, ...rest } = job.data;
+    await job.updateData(rest);
+    const wait = reserved - Date.now();
+    if (wait > 0) await sleep(wait);
+    return;
+  }
+
+  const slot = await reserveSendSlot(senderId, env.MIN_SEND_DELAY_MS);
+  const wait = slot - Date.now();
+  if (wait <= 0) return;
+  if (wait <= INLINE_WAIT_MAX_MS) {
+    await sleep(wait);
+    return;
+  }
+
+  jobLog.debug({ senderId, waitMs: wait }, 'sender is busy; sleeping until its reserved slot');
+  await job.updateData({ ...job.data, sendSlotAt: slot });
+  await job.moveToDelayed(slot, token);
+  throw new DelayedError();
 }
 
 /** Truncate before it hits a TEXT column / the UI. */
@@ -61,6 +110,12 @@ export async function processSendEmailJob(
     return { result: 'skipped', reason: `status-${email.status}` };
   }
 
+  // --- Spacing: minimum gap between sends from one sender ------------------
+  // Runs before any quota is taken, so a job that goes back to sleep here has
+  // not spent anything it would then spend a second time on waking.
+  const senderId = email.mailboxId ?? `user-${email.userId}`;
+  await waitForSendSlot(job, token, senderId, jobLog);
+
   // --- Bonus B: warmup / per-mailbox daily cap -----------------------------
   // Checked at the top of the processor, before any SMTP work. A job over its
   // mailbox's cap re-delays itself rather than failing - being over quota is a
@@ -84,6 +139,37 @@ export async function processSendEmailJob(
       throw new DelayedError();
     }
     quotaConsumed = true;
+  }
+
+  // --- Hourly ceilings: global, per sender, and per bulk batch -------------
+  const hourlyLimits: HourlyLimit[] = [
+    { scope: 'global', id: 'all', limit: env.MAX_EMAILS_PER_HOUR },
+    { scope: 'sender', id: senderId, limit: env.MAX_EMAILS_PER_HOUR_PER_SENDER },
+    ...(email.batchId && email.hourlyLimit
+      ? [{ scope: 'batch', id: email.batchId, limit: email.hourlyLimit }]
+      : []),
+  ];
+  const hourly = await consumeHourly(hourlyLimits, email.scheduledAt);
+
+  if (!hourly.allowed) {
+    if (quotaConsumed && email.mailbox) {
+      await refundMailboxQuota(email.mailbox.id).catch((refundErr: unknown) =>
+        jobLog.warn({ err: refundErr }, 'failed to refund warmup quota'),
+      );
+    }
+
+    const reason = `${hourly.hit.scope} hourly limit (${hourly.hit.limit}/h) reached`;
+    jobLog.info({ ...hourly.hit, retryAt: new Date(hourly.retryAt).toISOString() }, `${reason}; deferring to next window`);
+    await recordEvent(email.id, 'QUEUED', {
+      deferred: true,
+      reason,
+      retryAt: new Date(hourly.retryAt).toISOString(),
+    });
+
+    // Over the hour's budget is a scheduling condition, not a failure: the job
+    // keeps its attempts and simply wakes up in the next window.
+    await job.moveToDelayed(hourly.retryAt, token);
+    throw new DelayedError();
   }
 
   // --- Send ----------------------------------------------------------------
@@ -138,6 +224,9 @@ export async function processSendEmailJob(
         jobLog.warn({ err: refundErr }, 'failed to refund warmup quota'),
       );
     }
+    await refundHourly(hourlyLimits).catch((refundErr: unknown) =>
+      jobLog.warn({ err: refundErr }, 'failed to refund hourly quota'),
+    );
 
     const message = trimError(err instanceof Error ? err.message : String(err));
     const isFinalAttempt = attemptNumber >= (job.opts.attempts ?? env.JOB_ATTEMPTS);

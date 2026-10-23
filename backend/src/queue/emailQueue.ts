@@ -15,6 +15,12 @@ export interface SendEmailJobData {
   userId: string;
   /** Only for log/trace correlation — never trusted for scheduling decisions. */
   enqueuedAt: string;
+  /**
+   * A send slot this job already reserved before being put back to sleep (see
+   * services/throttle.ts). Lets it use that slot on waking instead of joining
+   * the back of the line again.
+   */
+  sendSlotAt?: number;
 }
 
 /**

@@ -31,3 +31,6 @@ Thumbs.db
 
 # docker volume mounts (if bind-mounted locally)
 .docker-data/
+
+# local Claude Code launch config
+.claude/

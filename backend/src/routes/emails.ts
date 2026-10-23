@@ -14,10 +14,13 @@ import {
 } from '../lib/dto.js';
 import {
   cancelScheduledEmail,
+  createBulkScheduledEmails,
   createScheduledEmail,
   rescheduleEmail,
 } from '../services/scheduling.js';
 import { scoreDeliverability } from '../services/deliverability.js';
+import { hourlyUsage } from '../services/throttle.js';
+import { env } from '../config/env.js';
 
 export const emailsRouter = Router();
 
@@ -64,6 +67,34 @@ const createEmailSchema = z.object({
 });
 
 type CreateEmailBody = z.infer<typeof createEmailSchema>;
+
+/**
+ * Bulk request, as sent by the compose form after it has parsed an uploaded
+ * CSV / text file. The file itself never reaches the server — the browser
+ * extracts the addresses, so the API takes a plain list it can validate.
+ */
+const bulkEmailSchema = z.object({
+  recipients: z
+    .array(z.string().trim().toLowerCase().pipe(z.email('Every recipient must be a valid email address')))
+    .min(1, 'Add at least one recipient')
+    .max(env.BULK_MAX_RECIPIENTS, `At most ${env.BULK_MAX_RECIPIENTS} recipients per request`)
+    // The same address twice in one upload is almost always a CSV artefact.
+    .transform((list) => [...new Set(list)]),
+  subject: z.string().trim().min(1, 'Subject is required').max(998),
+  body: z.string().max(100_000).default(''),
+  /** When the first email goes out. ISO-8601, already UTC. */
+  startAt: z.coerce.date().refine((d) => !Number.isNaN(d.getTime()), {
+    message: 'startAt must be a valid ISO-8601 datetime',
+  }),
+  /** Gap between consecutive recipients, in seconds. */
+  delayBetweenSeconds: z.coerce.number().int().min(0).max(86_400).default(2),
+  /** This batch's own ceiling, on top of the server-wide ones. */
+  hourlyLimit: z.coerce.number().int().min(1).max(10_000).nullish(),
+  timezone: z.string().trim().min(1).max(64).default('UTC'),
+  followUpAfterHours: z.coerce.number().int().min(1).max(720).nullish(),
+});
+
+type BulkEmailBody = z.infer<typeof bulkEmailSchema>;
 
 const listEmailsSchema = z.object({
   /** Single status, or a comma-separated list ("SENT,FAILED"). */
@@ -124,6 +155,66 @@ emailsRouter.post(
     });
 
     res.status(201).json({ data: toScheduledEmailDto(withMailbox) });
+  }),
+);
+
+/**
+ * POST /api/emails/bulk
+ *
+ * One row and one delayed job per recipient, spaced `delayBetweenSeconds`
+ * apart and rolled into later hours when `hourlyLimit` would be exceeded.
+ */
+emailsRouter.post(
+  '/bulk',
+  validate({ body: bulkEmailSchema }),
+  asyncHandler(async (req, res) => {
+    const user = currentUser(req);
+    const body = validated<BulkEmailBody>(res, 'body');
+
+    const { batchId, emails } = await createBulkScheduledEmails({
+      userId: user.id,
+      recipients: body.recipients,
+      subject: body.subject,
+      bodyText: body.body,
+      startAt: body.startAt,
+      delayBetweenMs: body.delayBetweenSeconds * 1000,
+      hourlyLimit: body.hourlyLimit ?? null,
+      timezone: body.timezone,
+      followUpAfterHours: body.followUpAfterHours ?? null,
+    });
+
+    res.status(201).json({
+      data: {
+        batchId,
+        count: emails.length,
+        firstAt: emails[0]?.scheduledAt.toISOString() ?? null,
+        lastAt: emails.at(-1)?.scheduledAt.toISOString() ?? null,
+      },
+    });
+  }),
+);
+
+/**
+ * GET /api/emails/throughput
+ *
+ * The pacing rules the worker is enforcing and how much of this hour's global
+ * budget is already spent — so the dashboard can show the limits, not just
+ * claim them.
+ */
+emailsRouter.get(
+  '/throughput',
+  asyncHandler(async (_req, res) => {
+    const [globalUsed] = await hourlyUsage([{ scope: 'global', id: 'all' }]).catch(() => [0]);
+    res.json({
+      data: {
+        minSendDelayMs: env.MIN_SEND_DELAY_MS,
+        maxPerHour: env.MAX_EMAILS_PER_HOUR,
+        maxPerHourPerSender: env.MAX_EMAILS_PER_HOUR_PER_SENDER,
+        usedThisHour: globalUsed ?? 0,
+        workerConcurrency: env.WORKER_CONCURRENCY,
+        bulkMaxRecipients: env.BULK_MAX_RECIPIENTS,
+      },
+    });
   }),
 );
 

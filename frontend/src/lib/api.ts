@@ -1,5 +1,8 @@
 import type {
+  AuthConfig,
   AuthUser,
+  BulkCreateInput,
+  BulkCreateResult,
   CreateEmailInput,
   DeliverabilityPreview,
   EmailStatus,
@@ -8,6 +11,7 @@ import type {
   ScheduledEmail,
   ScheduledEmailDetail,
   StatusCounts,
+  Throughput,
 } from './types';
 
 /**
@@ -176,6 +180,15 @@ export const api = {
 
   me: () => request<{ user: AuthUser }>('/api/auth/me'),
 
+  authConfig: () => request<AuthConfig>('/api/auth/config'),
+
+  /** Exchange a Google Identity Services credential (an ID token) for our JWT. */
+  googleLogin: (credential: string) =>
+    request<AuthResponse>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    }),
+
   // --- emails --------------------------------------------------------------
 
   /** Returns the full envelope: list responses carry `pagination` alongside `data`. */
@@ -192,6 +205,12 @@ export const api = {
 
   createEmail: (input: CreateEmailInput) =>
     request<ScheduledEmail>('/api/emails', { method: 'POST', body: JSON.stringify(input) }),
+
+  /** One email per recipient, spaced and hourly-capped server-side. */
+  createBulk: (input: BulkCreateInput) =>
+    request<BulkCreateResult>('/api/emails/bulk', { method: 'POST', body: JSON.stringify(input) }),
+
+  throughput: () => request<Throughput>('/api/emails/throughput'),
 
   cancelEmail: (id: string) => request<ScheduledEmail>(`/api/emails/${id}`, { method: 'DELETE' }),
 

@@ -4,8 +4,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { Alert, Button, Field, Input } from '../components/ui';
-import Logo from '../components/Logo';
+import GoogleButton from '../components/GoogleButton';
 import { useDocumentTitle } from '../lib/useDocumentTitle';
+import AuthLanding from './AuthLanding';
 
 /** Matches prisma/seed.ts so a reviewer never has to guess. */
 const DEMO = { email: 'demo@timedink.dev', password: 'demo1234' };
@@ -24,6 +25,9 @@ export default function LoginPage() {
 
   if (user) return <Navigate to="/dashboard" replace />;
 
+  // Send the user back where they were headed before the redirect.
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -31,8 +35,6 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // Send the user back where they were headed before the redirect.
-      const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
       setError(
@@ -46,100 +48,84 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell
-      eyebrow="Sign in"
-      headline={
-        <>
-          Write it now.
-          <br />
-          <span className="text-ink-3 italic">Send it</span> exactly when
-          <br />
-          you meant to.
-        </>
+    <AuthLanding
+      defaultOpen
+      card={
+        <AuthCard title="Welcome back" subtitle="Sign in to your scheduling console.">
+          <GoogleButton redirectTo={from} />
+          <Divider />
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {error && <Alert>{error}</Alert>}
+
+            <Field label="Email" required>
+              <Input
+                type="email"
+                name="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </Field>
+
+            <Field label="Password" required>
+              <Input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+
+            <Button type="submit" size="lg" loading={submitting} className="w-full">
+              Sign in
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-[13px] text-ink-3">
+            No account?{' '}
+            <Link to="/register" className="font-medium text-ink underline decoration-white/25 underline-offset-4 hover:decoration-accent">
+              Create one
+            </Link>
+          </p>
+
+          <p className="mono mt-6 rounded-xl border border-edge bg-black/20 px-3.5 py-2.5 text-center text-[11px] leading-relaxed text-ink-3">
+            Pre-filled with the seeded demo account · run <span className="text-ink-2">npm run seed</span>
+          </p>
+        </AuthCard>
       }
-    >
-      <form onSubmit={handleSubmit} className="space-y-7" noValidate>
-        {error && <Alert>{error}</Alert>}
-
-        <Field label="Email" required>
-          <Input
-            type="email"
-            name="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-
-        <Field label="Password" required>
-          <Input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
-
-        <Button type="submit" loading={submitting} className="w-full">
-          Sign in
-        </Button>
-      </form>
-
-      <p className="mt-8 text-[13px] text-ink-2">
-        No account?{' '}
-        <Link to="/register" className="text-ink underline decoration-rule-strong underline-offset-4 hover:decoration-ink">
-          Create one
-        </Link>
-      </p>
-
-      <p className="mt-8 border-t border-rule pt-5 text-xs leading-relaxed text-ink-3">
-        Pre-filled with the seeded demo account. Run{' '}
-        <code className="mono text-ink-2">npm run seed</code> in the backend first.
-      </p>
-    </AuthShell>
+    />
   );
 }
 
-/**
- * Two-column editorial split: the argument on the left, the form on the right.
- * Below `lg` it stacks and the display column shrinks to just the wordmark.
- */
-export function AuthShell({
-  eyebrow,
-  headline,
+/** The glass card the hero holds — shared by sign in and registration. */
+export function AuthCard({
+  title,
+  subtitle,
   children,
 }: {
-  eyebrow: string;
-  headline: ReactNode;
+  title: string;
+  subtitle: string;
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-full p-3 sm:p-5">
-      <div className="frame grid min-h-[calc(100vh-1.5rem)] grid-cols-1 sm:min-h-[calc(100vh-2.5rem)] lg:grid-cols-2">
-        {/* Display column */}
-        <div className="flex flex-col justify-between gap-12 border-b border-rule p-8 sm:p-12 lg:border-r lg:border-b-0">
-          <Logo />
+    <div className="glass-strong ring-gradient rounded-[28px] p-7 sm:p-8 shadow-2xl">
+      <h2 className="headline text-[2.1rem] pr-10">{title}</h2>
+      <p className="mt-1.5 mb-7 text-[13.5px] text-ink-3">{subtitle}</p>
+      {children}
+    </div>
+  );
+}
 
-          <h1 className="display max-w-xl text-[2.75rem] leading-[1.05] sm:text-6xl">{headline}</h1>
-
-          <div className="label hidden gap-6 lg:flex">
-            <span>Scheduled send</span>
-            <span>Warmup limits</span>
-            <span>Open tracking</span>
-          </div>
-        </div>
-
-        {/* Form column */}
-        <main className="flex items-center justify-center p-8 sm:p-12">
-          <div className="w-full max-w-sm">
-            <p className="label mb-8">{eyebrow}</p>
-            {children}
-          </div>
-        </main>
-      </div>
+export function Divider() {
+  return (
+    <div className="my-6 flex items-center gap-3" aria-hidden="true">
+      <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/15" />
+      <span className="label">or with email</span>
+      <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/15" />
     </div>
   );
 }

@@ -17,7 +17,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
   <img alt="Prisma with MySQL 8" src="https://img.shields.io/badge/Prisma-MySQL%208-2D3748?style=flat-square&logo=prisma&logoColor=white" />
   <img alt="BullMQ on Redis 7" src="https://img.shields.io/badge/BullMQ-Redis%207-DC382D?style=flat-square&logo=redis&logoColor=white" />
   <img alt="React 19" src="https://img.shields.io/badge/React-19-087EA4?style=flat-square&logo=react&logoColor=white" />
-  <img alt="58 tests passing" src="https://img.shields.io/badge/tests-58%20passing-E5A13C?style=flat-square" />
+  <img alt="73 tests passing" src="https://img.shields.io/badge/tests-73%20passing-E5A13C?style=flat-square" />
 </p>
 
 <br />
@@ -33,7 +33,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 | | |
 | --- | --- |
 | **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real, viewable preview link |
-| **Tests** | 58, hermetic — no MySQL, Redis or SMTP needed to run them |
+| **Tests** | 73, hermetic — no MySQL, Redis or SMTP needed to run them |
 | **Clone → running** | ~4 minutes, five commands |
 
 ---
@@ -159,6 +159,15 @@ Open **<http://localhost:5173>** and sign in — the form is pre-filled with the
 email:    demo@timedink.dev
 password: demo1234
 ```
+
+### Google sign-in (optional)
+
+Create an OAuth client of type **Web application** in the
+[Google Cloud console](https://console.cloud.google.com/apis/credentials), add
+`http://localhost:5173` as an **Authorised JavaScript origin**, and put the client id in
+`backend/.env` as `GOOGLE_CLIENT_ID`. The login page then shows Google's button; the ID token it
+returns is verified server-side (signature, expiry and audience) before an account is created or
+linked. Without it, the button explains what to set and the demo account still works.
 
 | Surface | URL |
 | --- | --- |
@@ -416,6 +425,24 @@ attempts, 5s base). Between attempts the row sits at `QUEUED` with `lastError` p
 dashboard shows it as still in flight; it only lands in `FAILED` once attempts are exhausted.
 Reporting `FAILED` on attempt 1 of 3 would be a lie the UI then has to walk back.
 
+**Hourly ceilings and send spacing.** On top of the burst limiter, the worker enforces the
+pacing a real sender needs, all coordinated in Redis so it holds across any number of workers:
+
+| Control | Default | How |
+| --- | --- | --- |
+| `MAX_EMAILS_PER_HOUR` | 200 | global counter per UTC hour |
+| `MAX_EMAILS_PER_HOUR_PER_SENDER` | 50 | one counter per mailbox per UTC hour |
+| per-batch `hourlyLimit` | from the request | one counter per bulk batch per UTC hour |
+| `MIN_SEND_DELAY_MS` | 2000 | a "next free slot" per sender, reserved atomically |
+
+The three hourly counters are checked and incremented in **one Lua script**, so a job that passes
+the global check but fails the sender check never leaves the global counter one too high. A job
+over any ceiling is **moved to the next hour window, not dropped**: it keeps its attempts, writes a
+`QUEUED` event saying which limit deferred it, and wakes at the top of the next hour, offset by its
+position in the original hour so the order survives the deferral. Spacing works the same way:
+a job whose slot is more than 5s away goes back to the delayed set holding its reservation instead
+of sitting on a concurrency slot. See [`services/throttle.ts`](backend/src/services/throttle.ts).
+
 📄 [`worker.ts`](backend/src/worker.ts) · [`queue/processor.ts`](backend/src/queue/processor.ts)
 
 ---
@@ -506,6 +533,9 @@ ramp is demonstrable without waiting real days.
 | Scheduler (create → delayed job) | [`services/scheduling.ts`](backend/src/services/scheduling.ts) · [`queue/emailQueue.ts`](backend/src/queue/emailQueue.ts) · [`routes/emails.ts`](backend/src/routes/emails.ts) |
 | Restart persistence / reconciliation | [`services/reconciliation.ts`](backend/src/services/reconciliation.ts) · [`server.ts`](backend/src/server.ts) · [`docker-compose.yml`](docker-compose.yml) |
 | Rate limiting (queue-wide cap) | [`worker.ts`](backend/src/worker.ts) · [`queue/emailQueue.ts`](backend/src/queue/emailQueue.ts) |
+| Hourly ceilings + min send gap | [`services/throttle.ts`](backend/src/services/throttle.ts) · [`queue/processor.ts`](backend/src/queue/processor.ts) |
+| Bulk / CSV scheduling | [`services/scheduling.ts`](backend/src/services/scheduling.ts) (`createBulkScheduledEmails`, `planBulkSchedule`) · [`routes/emails.ts`](backend/src/routes/emails.ts) |
+| Google sign-in | [`services/auth.ts`](backend/src/services/auth.ts) (`loginWithGoogle`) · [`routes/auth.ts`](backend/src/routes/auth.ts) |
 | Concurrency (per-process bound) | [`worker.ts`](backend/src/worker.ts) |
 | Send pipeline / retries | [`queue/processor.ts`](backend/src/queue/processor.ts) · [`services/mailer.ts`](backend/src/services/mailer.ts) |
 | Auth (JWT + bcrypt) | [`services/auth.ts`](backend/src/services/auth.ts) · [`middleware/auth.ts`](backend/src/middleware/auth.ts) · [`routes/auth.ts`](backend/src/routes/auth.ts) |
@@ -522,11 +552,15 @@ ramp is demonstrable without waiting real days.
 
 | Feature | File(s) |
 | --- | --- |
-| Login / register | [`LoginPage.tsx`](frontend/src/pages/LoginPage.tsx) · [`RegisterPage.tsx`](frontend/src/pages/RegisterPage.tsx) · [`lib/auth.tsx`](frontend/src/lib/auth.tsx) |
+| Landing + login / register | [`AuthLanding.tsx`](frontend/src/pages/AuthLanding.tsx) · [`LoginPage.tsx`](frontend/src/pages/LoginPage.tsx) · [`RegisterPage.tsx`](frontend/src/pages/RegisterPage.tsx) · [`lib/auth.tsx`](frontend/src/lib/auth.tsx) |
+| Google sign-in | [`GoogleButton.tsx`](frontend/src/components/GoogleButton.tsx) · [`lib/google.ts`](frontend/src/lib/google.ts) |
+| CSV parsing | [`lib/csv.ts`](frontend/src/lib/csv.ts) |
+| Throughput card | [`ThroughputPanel.tsx`](frontend/src/features/emails/ThroughputPanel.tsx) |
+| Motion (GSAP, Lenis, ScrollTrigger) | [`lib/motion.tsx`](frontend/src/lib/motion.tsx) · [`components/Background.tsx`](frontend/src/components/Background.tsx) · [`components/reactbits/`](frontend/src/components/reactbits) |
 | Dashboard (status tabs, polling) | [`DashboardPage.tsx`](frontend/src/pages/DashboardPage.tsx) |
 | Tables (per-status, preview links) | [`EmailTable.tsx`](frontend/src/features/emails/EmailTable.tsx) |
 | **Detail drawer + event timeline** | [`EmailDetailDrawer.tsx`](frontend/src/features/emails/EmailDetailDrawer.tsx) |
-| Compose (tz-aware picker, live scoring) | [`ComposeModal.tsx`](frontend/src/features/emails/ComposeModal.tsx) · [`lib/format.ts`](frontend/src/lib/format.ts) |
+| Compose (single + CSV bulk, tz-aware picker, live scoring) | [`ComposeModal.tsx`](frontend/src/features/emails/ComposeModal.tsx) · [`lib/format.ts`](frontend/src/lib/format.ts) |
 | Mailbox panel (warmup, rotation) | [`MailboxPanel.tsx`](frontend/src/features/mailboxes/MailboxPanel.tsx) |
 | Typed API client | [`lib/api.ts`](frontend/src/lib/api.ts) |
 | Design system / shared UI | [`index.css`](frontend/src/index.css) · [`components/ui.tsx`](frontend/src/components/ui.tsx) |
@@ -546,7 +580,11 @@ are `{ "data": … }`; list responses add `{ "pagination": … }`. Errors are
 | `POST` | `/api/auth/register` | create an account → `{ token, user }` |
 | `POST` | `/api/auth/login` | sign in → `{ token, user }` |
 | `GET` | `/api/auth/me` | validate a stored token |
+| `GET` | `/api/auth/config` | which sign-in methods are on (`googleClientId` or null) |
+| `POST` | `/api/auth/google` | exchange a Google ID token for our JWT |
 | `POST` | `/api/emails` | schedule an email |
+| `POST` | `/api/emails/bulk` | one email per recipient: `recipients[]`, `startAt`, `delayBetweenSeconds`, `hourlyLimit?` |
+| `GET` | `/api/emails/throughput` | the pacing rules in force and this hour's global usage |
 | `GET` | `/api/emails?status=&page=&pageSize=&q=` | list (status accepts `SENT,FAILED`) |
 | `GET` | `/api/emails/stats` | per-status counts for the tab badges |
 | `GET` | `/api/emails/:id` | detail **incl. the event timeline** |
@@ -573,21 +611,41 @@ curl -s -X POST http://localhost:4000/api/auth/login -H 'Content-Type: applicati
 
 ## Interface
 
-React 19 + TanStack Query + Tailwind 4. No component library and no animation library — the four
-runtime dependencies are React, React DOM, React Router and TanStack Query.
+React 19 + TanStack Query + Tailwind 4, animated with **GSAP** (ScrollTrigger + SplitText) and
+**Lenis** smooth scrolling, with background and effect components from
+[React Bits](https://reactbits.dev) (PrismaticBurst, LightRays, DarkVeil, SpotlightCard,
+SplitText, ShinyText, Magnet, ClickSpark) vendored into [`components/reactbits/`](frontend/src/components/reactbits).
 
-The design is editorial: a warm paper canvas, ink type, hairline rules, and a single amber accent
-reserved for primary actions and the active marker. Depth is a 1px rule and a surface one shade
-lighter than the canvas — never a shadow or a blur. The whole app sits inside a ruled frame with
-the paper showing around it, which is what makes it read as a composed page rather than a browser
-window.
+The design is warm editorial dark: a plum-black night, a large high-contrast serif with one
+italic amber word per headline, cream body text and wide-tracked mono labels. The landing hero
+is lit by a prismatic burst behind a floating "send pass" ticket whose status cycles
+Queued → Sending → Sent; the closing section sits under falling light rays; the dashboard has a
+slow dark veil behind dark, near-opaque cards. Amber is reserved for the primary action.
+
+- **Signed out**, `/login` is a scrolling product page, with sign-in in a slide-over panel: a
+  split-text headline, spotlight feature cards, a scroll-scrubbed four-step pipeline, a sentence
+  that lights up word by word as you scroll, and stats that count up when they enter the viewport.
+- **Signed in**, the dashboard header shows the user's Google avatar, name and email; status cards
+  count up and double as tab switches; the segmented tabs have a gliding indicator; rows cascade in
+  when the result set changes (not on every poll); the compose dialog and detail drawer animate in
+  with GSAP; toasts spring in and blur out.
+- **Compose** has two modes: a single email, or **Bulk from CSV**. Drop a CSV or .txt and the
+  addresses are extracted in the browser wherever they sit in the file and de-duplicated, with a
+  live count, a preview of the first few, delay-between-emails and hourly-limit fields, and the
+  computed time of the first and last send before you submit.
+
+**Keeping it fast.** Each shader is lazy-loaded out of the first chunk, renders at DPR 1 (it is a
+soft effect; 3× retina pixels buy nothing), pauses when off-screen and under
+`prefers-reduced-motion`; animations are transform/opacity only on one shared GSAP ticker; the
+table animates on set changes, never per poll; and reduced-motion users get every state with no
+motion at all.
 
 Three typefaces, each with a job and a full system fallback:
 
 | Face | Used for |
 | --- | --- |
-| Instrument Serif | display only — page titles, auth headline, drawer and modal headings |
-| Inter | all running text and UI |
+| Fraunces | headlines; italic for the amber accent word |
+| Geist | all running text and UI |
 | JetBrains Mono | micro-labels, timestamps, scores, counts |
 
 Details worth calling out:
@@ -628,7 +686,7 @@ Details worth calling out:
 cd backend && npm test
 ```
 
-**58 tests, ~2s, and no MySQL, Redis or SMTP required.** Everything at the process edge is faked,
+**73 tests, and no MySQL, Redis or SMTP required.** Everything at the process edge is faked,
 so the suite runs on a clean checkout and in CI without containers.
 
 | File | Covers |
@@ -636,7 +694,8 @@ so the suite runs on a clean checkout and in CI without containers.
 | [`unit/warmup.test.ts`](backend/tests/unit/warmup.test.ts) | the rate-limiting logic this app owns: the warmup token bucket (allow/deny at the boundary, roll-back on denial, TTL set exactly once, per-mailbox isolation, UTC-day rollover, refunds that never go negative) and the limit arithmetic |
 | [`unit/reconciliation.test.ts`](backend/tests/unit/reconciliation.test.ts) | boot reconciliation: the requeue-vs-stale policy including exact threshold boundaries, `PENDING` rows, one clock across the sweep, and failure isolation when a row throws |
 | [`unit/deliverability.test.ts`](backend/tests/unit/deliverability.test.ts) | the scorer, including purity and score clamping |
-| [`integration/createEmail.test.ts`](backend/tests/integration/createEmail.test.ts) | `POST /api/emails` end to end through express → auth → zod → scheduling → `queue.add`, asserting the job is enqueued **with the correct delay** and the deterministic job id; plus write-ordering (row durable before Redis is touched), the event trail, past-time clamping, auth/validation rejection, and the cancel path |
+| [`unit/throttle.test.ts`](backend/tests/unit/throttle.test.ts) | hourly ceilings (tightest limit wins, no partial charge on rejection, refunds, window rollover, order-preserving deferral), send-slot spacing, and the bulk schedule planner |
+| [`integration/createEmail.test.ts`](backend/tests/integration/createEmail.test.ts) | `POST /api/emails` end to end through express → auth → zod → scheduling → `queue.add`, asserting the job is enqueued **with the correct delay** and the deterministic job id; plus write-ordering (row durable before Redis is touched), the event trail, past-time clamping, auth/validation rejection, the cancel path, and `POST /api/emails/bulk` (de-duplication, spacing, hourly roll-over, rejection of a bad address) |
 
 The queue-level limiter is BullMQ's own, so it is verified by observation (the burst histogram
 above) rather than by unit-testing a library.
@@ -659,6 +718,11 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 | `SMTP_USER` / `SMTP_PASS` | *(unset)* | real-provider credentials; take precedence over the pair above |
 | `WORKER_CONCURRENCY` | `5` | jobs in flight per worker process |
 | `RATE_LIMIT_MAX` / `_DURATION_MS` | `10` / `10000` | queue-wide send cap |
+| `MIN_SEND_DELAY_MS` | `2000` | minimum gap between sends from one mailbox |
+| `MAX_EMAILS_PER_HOUR` | `200` | global hourly ceiling |
+| `MAX_EMAILS_PER_HOUR_PER_SENDER` | `50` | per-mailbox hourly ceiling |
+| `BULK_MAX_RECIPIENTS` | `1000` | most recipients in one bulk request |
+| `GOOGLE_CLIENT_ID` | *(unset)* | enables "Continue with Google"; email + password works without it |
 | `JOB_ATTEMPTS` / `JOB_BACKOFF_MS` | `3` / `5000` | retry policy |
 | `STALE_CATCHUP_THRESHOLD_MINUTES` | `1440` | past-due window before flagging for review |
 | `WARMUP_ENABLED` | `true` | bonus B toggle |
@@ -818,7 +882,7 @@ In priority order, with reasoning — the full list of shortcuts and trade-offs 
    most obvious hardening gap today.
 3. **A conditional status update as the send gate.** Closes the last microseconds of the
    cancel-versus-send race (§3.1) with a compare-and-set instead of a read-then-send.
-4. **Frontend tests.** All 58 are backend; with the time available, testing the
+4. **Frontend tests.** All 73 are backend; with the time available, testing the
    scheduling/reconciliation/limiter logic was worth more than testing that a table renders.
 5. **CI + app Dockerfiles.** `npm test` and `npm run typecheck` are hermetic and would drop
    straight into a workflow.

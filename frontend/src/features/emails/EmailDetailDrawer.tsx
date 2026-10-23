@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useToast } from '../../lib/toast';
 import { useFocusTrap } from '../../lib/useFocusTrap';
 import { datetimeLocalValue, formatDateTime, formatRelative, localInputToUtcIso } from '../../lib/format';
-import { Button, ErrorState, Field, Input, Spinner, StatusBadge } from '../../components/ui';
+import { gsap, prefersReducedMotion } from '../../lib/motion';
+import { Button, CloseIcon, ErrorState, Field, Input, Spinner, StatusBadge } from '../../components/ui';
 import type { EmailEvent, EmailEventType, ScheduledEmailDetail } from '../../lib/types';
 
 interface Props {
@@ -33,6 +34,7 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
   const panelRef = useFocusTrap<HTMLDivElement>(open);
   const [rescheduling, setRescheduling] = useState(false);
   const [newTime, setNewTime] = useState('');
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['email', emailId],
@@ -85,11 +87,23 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
     };
   }, [open, onClose]);
 
+  // Slide in from the right with a little overshoot-free expo ease.
+  useEffect(() => {
+    if (!open || prefersReducedMotion()) return;
+    const tl = gsap.timeline();
+    tl.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25 });
+    tl.fromTo(panelRef.current, { xPercent: 100 }, { xPercent: 0, duration: 0.6, ease: 'expo.out' }, '<');
+    return () => {
+      tl.kill();
+    };
+  }, [open, panelRef]);
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-40 flex justify-end bg-ink/25"
+      ref={backdropRef}
+      className="fixed inset-0 z-40 flex justify-end bg-night/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="detail-title"
@@ -99,21 +113,19 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
     >
       <div
         ref={panelRef}
-        className="h-full w-full max-w-xl overflow-y-auto border-l border-rule-strong bg-surface"
+        className="glass-strong h-full w-full max-w-xl overflow-y-auto rounded-l-[28px] border-r-0"
       >
-        <div className="sticky top-0 flex items-center justify-between gap-4 border-b border-rule bg-surface px-6 py-4">
-          <h2 id="detail-title" className="display truncate text-xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-edge bg-night-2/80 px-6 py-4 backdrop-blur-xl">
+          <h2 id="detail-title" className="headline truncate text-2xl">
             {data?.subject ?? 'Email'}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-sm p-1 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink"
+            className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-xl text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
           >
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
 
@@ -125,7 +137,7 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
           <ErrorState error={error} />
         ) : (
           <>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-b border-rule px-6 py-6">
+            <dl className="m-5 grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-edge bg-black/20 p-5">
               <Detail label="Status">
                 <StatusBadge status={data.status} />
               </Detail>
@@ -166,7 +178,7 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
 
             {/* Bonus A — the flags behind the score, spelled out. */}
             {data.deliverabilityScore !== null && (
-              <div className="border-b border-rule px-6 py-6">
+              <div className="border-b border-edge px-6 py-6">
                 <div className="flex items-baseline justify-between">
                   <p className="label">Deliverability</p>
                   <span className="mono text-[13px] font-medium">
@@ -188,7 +200,7 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
             )}
 
             {data.lastError && (
-              <div className="border-b border-rule px-6 py-6">
+              <div className="border-b border-edge px-6 py-6">
                 <p className="label mb-2">Last error</p>
                 <p className="mono text-xs leading-relaxed break-words text-st-failed">
                   {data.lastError}
@@ -196,14 +208,14 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
               </div>
             )}
 
-            <div className="border-b border-rule px-6 py-6">
+            <div className="border-b border-edge px-6 py-6">
               <p className="label mb-4">Timeline</p>
               <Timeline events={data.events} />
             </div>
 
-            <div className="border-b border-rule px-6 py-6">
+            <div className="border-b border-edge px-6 py-6">
               <p className="label mb-3">Body</p>
-              <pre className="text-[13px] leading-relaxed whitespace-pre-wrap text-ink-2">
+              <pre className="well rounded-2xl p-4 font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-ink-2">
                 {data.bodyText}
               </pre>
             </div>
@@ -213,7 +225,7 @@ export default function EmailDetailDrawer({ emailId, onClose, onDuplicate }: Pro
               than cancel-and-recreate, so the job keeps its identity.
             */}
             {CANCELLABLE.has(data.status) && rescheduling && (
-              <div className="border-b border-rule px-6 py-6">
+              <div className="border-b border-edge px-6 py-6">
                 <Field
                   label="New send time"
                   required
@@ -299,7 +311,7 @@ const EVENT_DOT: Record<EmailEventType, string> = {
   SENT: 'bg-st-sent',
   FAILED: 'bg-st-failed',
   CANCELLED: 'bg-st-cancelled',
-  OPENED: 'bg-accent',
+  OPENED: 'bg-ember',
   PENDING: 'bg-st-pending',
 };
 
@@ -332,14 +344,14 @@ function Timeline({ events }: { events: EmailEvent[] }) {
   return (
     <ol className="relative">
       {/* The spine the dots hang off. */}
-      <span className="absolute top-1 bottom-1 left-[3px] w-px bg-rule" aria-hidden="true" />
+      <span className="absolute top-1 bottom-1 left-[4px] w-px bg-gradient-to-b from-amber/60 via-white/15 to-transparent" aria-hidden="true" />
 
       {events.map((event) => {
         const summary = metaSummary(event.meta);
         return (
           <li key={event.id} className="relative flex gap-4 pb-5 last:pb-0">
             <span
-              className={`z-10 mt-1.5 h-[7px] w-[7px] shrink-0 rounded-full ring-2 ring-surface ${
+              className={`z-10 mt-1.5 h-[9px] w-[9px] shrink-0 rounded-full shadow-[0_0_10px_currentColor] ring-2 ring-night-2 ${
                 EVENT_DOT[event.type] ?? 'bg-st-pending'
               }`}
               aria-hidden="true"

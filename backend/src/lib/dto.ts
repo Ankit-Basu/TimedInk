@@ -31,6 +31,8 @@ export interface ScheduledEmailDto {
   mailbox: MailboxSummaryDto | null;
   followUpOfId: string | null;
   followUpAfterHours: number | null;
+  batchId: string | null;
+  hourlyLimit: number | null;
   openedAt: string | null;
   sentAt: string | null;
   createdAt: string;
@@ -92,6 +94,8 @@ export function toScheduledEmailDto(email: EmailWithMailbox): ScheduledEmailDto 
       : null,
     followUpOfId: email.followUpOfId,
     followUpAfterHours: email.followUpAfterHours,
+    batchId: email.batchId,
+    hourlyLimit: email.hourlyLimit,
     openedAt: email.openedAt?.toISOString() ?? null,
     sentAt: email.sentAt?.toISOString() ?? null,
     createdAt: email.createdAt.toISOString(),

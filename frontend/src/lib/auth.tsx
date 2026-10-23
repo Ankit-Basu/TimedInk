@@ -9,6 +9,8 @@ interface AuthState {
   initialising: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  /** Sign in with the credential Google Identity Services returns. */
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -67,14 +69,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    const result = await api.googleLogin(credential);
+    tokenStore.set(result.token);
+    setUser(result.user);
+  }, []);
+
   const logout = useCallback(() => {
     tokenStore.clear();
+    // Stop Google's One Tap from silently signing the same account back in.
+    window.google?.accounts.id.disableAutoSelect();
     setUser(null);
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ user, initialising, login, register, logout }),
-    [user, initialising, login, register, logout],
+    () => ({ user, initialising, login, register, loginWithGoogle, logout }),
+    [user, initialising, login, register, loginWithGoogle, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

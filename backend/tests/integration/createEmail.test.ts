@@ -13,7 +13,7 @@ import { FakePrisma, makeMailbox } from '../helpers/fakePrisma.js';
  */
 
 const FROZEN_NOW = new Date('2026-03-14T12:00:00.000Z');
-const USER = { id: 'user-1', email: 'demo@outboxpilot.dev', name: 'Demo Operator' };
+const USER = { id: 'user-1', email: 'demo@outboxpilot.dev', name: 'Demo Operator', avatarUrl: null };
 
 const mailbox = makeMailbox({ userId: USER.id });
 const fakePrisma = new FakePrisma({ mailboxes: [mailbox] });
@@ -242,5 +242,51 @@ describe('DELETE /api/emails/:id', () => {
       .expect(409);
 
     expect(response.body.error.code).toBe('CONFLICT');
+  });
+});
+
+describe('POST /api/emails/bulk', () => {
+  const bulkPayload = {
+    recipients: ['a@example.com', 'B@example.com', 'c@example.com', 'a@example.com'],
+    subject: 'Quick question',
+    body: 'Hi there',
+    startAt: new Date(FROZEN_NOW.getTime() + 60_000).toISOString(),
+    delayBetweenSeconds: 30,
+    timezone: 'Asia/Kolkata',
+  };
+
+  it('schedules one delayed job per unique recipient, spaced by the delay', async () => {
+    const response = await request(app)
+      .post('/api/emails/bulk')
+      .set('Authorization', authHeader())
+      .send(bulkPayload)
+      .expect(201);
+
+    // The duplicate (case-insensitively) is dropped.
+    expect(response.body.data.count).toBe(3);
+    expect(queueAdd).toHaveBeenCalledTimes(3);
+
+    const delays = queueAdd.mock.calls.map((call) => (call[2] as { delay: number }).delay);
+    expect(delays.sort((a, b) => a - b)).toEqual([60_000, 90_000, 120_000]);
+  });
+
+  it('rolls into the next hour once the batch hourly limit is used up', async () => {
+    const response = await request(app)
+      .post('/api/emails/bulk')
+      .set('Authorization', authHeader())
+      .send({ ...bulkPayload, hourlyLimit: 2 })
+      .expect(201);
+
+    const lastAt = new Date(response.body.data.lastAt as string).getTime();
+    expect(lastAt).toBe(FROZEN_NOW.getTime() + 60_000 + 60 * 60 * 1000);
+  });
+
+  it('rejects a recipient list containing an invalid address', async () => {
+    await request(app)
+      .post('/api/emails/bulk')
+      .set('Authorization', authHeader())
+      .send({ ...bulkPayload, recipients: ['ok@example.com', 'not-an-email'] })
+      .expect(400);
+    expect(queueAdd).not.toHaveBeenCalled();
   });
 });

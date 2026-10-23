@@ -1,4 +1,4 @@
-// Outbox Pilot — data model.
+// TimedInk — data model.
 //
 // MySQL is the source of truth for every scheduled email. Redis/BullMQ is a
 // *derived* index of work-to-do that can be rebuilt from these tables at any
@@ -40,8 +40,12 @@ enum EmailEventType {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
-  passwordHash String
+  // Null for accounts that only ever signed in with Google.
+  passwordHash String?
   name         String
+  // Google OAuth identity (the ID token's `sub`) and profile picture.
+  googleId     String?  @unique
+  avatarUrl    String?  @db.Text
   createdAt    DateTime @default(now())
 
   mailboxes       Mailbox[]
@@ -99,6 +103,11 @@ model ScheduledEmail {
   followUpQueuedAt   DateTime?
   openedAt           DateTime?
 
+  // Bulk scheduling: every row created by one CSV upload shares a batchId, and
+  // carries that request's hourly cap so the worker can enforce it per batch.
+  batchId     String?
+  hourlyLimit Int?
+
   /// Denormalised send time. The SENT EmailEvent is the audit record; this
   /// column exists so the follow-up sweeper is one indexed query, not a join.
   sentAt             DateTime?
@@ -117,6 +126,7 @@ model ScheduledEmail {
   @@index([status, scheduledAt])
   @@index([mailboxId])
   @@index([followUpOfId])
+  @@index([batchId])
   // Follow-up sweeper: "SENT, tracking on, not yet followed up".
   @@index([status, followUpQueuedAt])
   @@map("scheduled_emails")

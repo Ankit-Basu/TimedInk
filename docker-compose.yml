@@ -1,4 +1,4 @@
-# Local dev infrastructure for Outbox Pilot.
+# Local dev infrastructure for TimedInk.
 #
 # Only MySQL + Redis run here — the API, worker and frontend run on the host
 # (`npm run dev`) so that reloads are instant and stack traces point at real

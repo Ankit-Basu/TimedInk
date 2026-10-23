@@ -21,9 +21,11 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   if (initialising) {
     return (
-      <div className="flex min-h-full items-center justify-center gap-2.5 text-[13px] text-ink-3">
-        <Spinner className="h-4 w-4" />
-        Restoring your session…
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="glass flex items-center gap-3 rounded-full px-5 py-3 text-[13px] text-ink-2">
+          <Spinner className="h-4 w-4 text-accent" />
+          Restoring your session…
+        </div>
       </div>
     );
   }

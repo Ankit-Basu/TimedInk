@@ -79,6 +79,7 @@ JWT_SECRET          = <click Generate>
 WORKER_INLINE       = true
 LOG_PRETTY          = false
 BULL_BOARD_ENABLED  = false
+GOOGLE_CLIENT_ID    = <optional: OAuth client id, with your Vercel URL as an authorised origin>
 ```
 
 `WORKER_INLINE=true` matters: Render's free plan has no background workers, so the queue worker

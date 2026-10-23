@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { unauthorized } from '../lib/errors.js';
-import { verifyToken } from '../services/auth.js';
+import { verifyToken, type AuthUser } from '../services/auth.js';
 
 const BEARER_PREFIX = 'Bearer ';
 
@@ -34,7 +34,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
 }
 
 /** Narrowing helper so handlers do not repeat the non-null assertion. */
-export function currentUser(req: Request): { id: string; email: string; name: string } {
+export function currentUser(req: Request): AuthUser {
   if (!req.user) throw unauthorized();
   return req.user;
 }

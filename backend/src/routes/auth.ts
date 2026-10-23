@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { asyncHandler } from '../middleware/error.js';
 import { validate, validated } from '../middleware/validate.js';
 import { requireAuth, currentUser } from '../middleware/auth.js';
-import { loginUser, registerUser } from '../services/auth.js';
+import { loginUser, loginWithGoogle, registerUser } from '../services/auth.js';
+import { env } from '../config/env.js';
 
 export const authRouter = Router();
 
@@ -40,6 +41,26 @@ authRouter.post(
   asyncHandler(async (_req, res) => {
     const body = validated<LoginBody>(res, 'body');
     const result = await loginUser(body.email, body.password);
+    res.json({ data: result });
+  }),
+);
+
+/**
+ * GET /api/auth/config - which sign-in methods this server offers. The client
+ * id is public by design (it ships in every Google button), so this is safe to
+ * expose unauthenticated.
+ */
+authRouter.get('/config', (_req, res) => {
+  res.json({ data: { googleClientId: env.GOOGLE_CLIENT_ID || null } });
+});
+
+/** POST /api/auth/google { credential } -> { token, user } */
+authRouter.post(
+  '/google',
+  validate({ body: z.object({ credential: z.string().min(1, 'credential is required').max(4096) }) }),
+  asyncHandler(async (_req, res) => {
+    const { credential } = validated<{ credential: string }>(res, 'body');
+    const result = await loginWithGoogle(credential);
     res.json({ data: result });
   }),
 );

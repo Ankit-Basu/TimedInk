@@ -11,7 +11,7 @@ export default defineConfig({
      * Proxy /api to the backend in dev. This keeps the browser on a single
      * origin, so there is no CORS preflight on every dashboard poll and the app
      * works unchanged if it is later served from behind the same reverse proxy.
-     * VITE_API_BASE_URL overrides it if you'd rather hit the API directly.
+     * There is no VITE_API_BASE_URL: point VITE_API_PROXY_TARGET elsewhere instead.
      */
     proxy: {
       '/api': {

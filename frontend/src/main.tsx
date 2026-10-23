@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
+import ClickSpark from './components/reactbits/ClickSpark';
 import { AuthProvider } from './lib/auth';
 import { ToastProvider } from './lib/toast';
 import { ApiError } from './lib/api';
@@ -38,7 +39,10 @@ createRoot(container).render(
         <BrowserRouter>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              {/* A small burst of light on every click — feedback that the press landed. */}
+              <ClickSpark sparkColor={['#ffe0a3', '#ffb547', '#f2762e']} sparkCount={9} sparkRadius={22} duration={480}>
+                <App />
+              </ClickSpark>
             </ToastProvider>
           </AuthProvider>
         </BrowserRouter>

@@ -45,6 +45,9 @@ export interface ScheduledEmail {
   mailbox: MailboxSummary | null;
   followUpOfId: string | null;
   followUpAfterHours: number | null;
+  /** Shared by every email created from one CSV upload. */
+  batchId: string | null;
+  hourlyLimit: number | null;
   openedAt: string | null;
   sentAt: string | null;
   createdAt: string;
@@ -78,6 +81,13 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  /** Google profile picture; null for email + password accounts. */
+  avatarUrl: string | null;
+}
+
+export interface AuthConfig {
+  /** Null when the server has no Google OAuth client configured. */
+  googleClientId: string | null;
 }
 
 export interface Pagination {
@@ -112,4 +122,33 @@ export interface CreateEmailInput {
   scheduledAt: string;
   timezone: string;
   followUpAfterHours?: number;
+}
+
+export interface BulkCreateInput {
+  recipients: string[];
+  subject: string;
+  body: string;
+  /** ISO-8601 UTC instant for the first send. */
+  startAt: string;
+  delayBetweenSeconds: number;
+  hourlyLimit?: number;
+  timezone: string;
+  followUpAfterHours?: number;
+}
+
+export interface BulkCreateResult {
+  batchId: string;
+  count: number;
+  firstAt: string | null;
+  lastAt: string | null;
+}
+
+/** The pacing rules the worker enforces, and this hour's spend against them. */
+export interface Throughput {
+  minSendDelayMs: number;
+  maxPerHour: number;
+  maxPerHourPerSender: number;
+  usedThisHour: number;
+  workerConcurrency: number;
+  bulkMaxRecipients: number;
 }

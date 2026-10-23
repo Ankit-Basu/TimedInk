@@ -159,6 +159,7 @@ Add these under **Environment**:
 | `APP_BASE_URL` | `https://timedink.onrender.com` *(fill in after the first deploy)* |
 | `CORS_ORIGIN` | your Vercel URL — set this in [step 5](#5--connect-the-two) |
 | `ETHEREAL_USER` / `ETHEREAL_PASS` | leave **blank** on the first deploy |
+| `GOOGLE_CLIENT_ID` | optional — your OAuth client id; add the Vercel URL as an authorised JavaScript origin on it |
 
 **`BULL_BOARD_ENABLED=false` is not optional.** Bull Board has no authentication — it would let
 anyone on the internet read job payloads and delete jobs.

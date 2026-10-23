@@ -101,6 +101,14 @@ cd backend && npm run burst -- --count=40
 
 **DO:** Let it run ~15 seconds. Don't wait for all forty; move on while it drains.
 
+**DO (if there is time):** Open Compose → **Bulk from CSV**, drop a small CSV, set the delay to 5s
+and the hourly limit to 2.
+
+> **SAY:** "Same pipeline in bulk. The browser pulls the addresses out of the file and shows the
+> count. Delay spaces them out, and with an hourly limit of two the third one rolls into the next
+> hour. The worker enforces that again at send time, alongside the global and per-sender hourly
+> caps on the right."
+
 ---
 
 ## 1:50 – 2:40 · Restart persistence — the main event

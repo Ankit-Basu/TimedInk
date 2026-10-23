@@ -25,6 +25,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
+  /**
+   * OAuth client id for "Sign in with Google". Optional: without it the login
+   * page hides the Google button and email + password still works.
+   */
+  GOOGLE_CLIENT_ID: z.string().trim().optional(),
+
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
@@ -69,6 +75,19 @@ const envSchema = z.object({
   /** Simulated provider send-rate cap: RATE_LIMIT_MAX sends per DURATION_MS. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_DURATION_MS: z.coerce.number().int().positive().default(10_000),
+  /**
+   * Minimum gap between two sends from the same mailbox. Enforced in the worker
+   * with a Redis "next free slot" per sender, so it holds across processes.
+   */
+  MIN_SEND_DELAY_MS: z.coerce.number().int().min(0).default(2_000),
+  /**
+   * Hourly send ceilings, counted in Redis per UTC hour window. A job that
+   * would exceed one is moved to the start of the next window, never dropped.
+   */
+  MAX_EMAILS_PER_HOUR: z.coerce.number().int().positive().default(200),
+  MAX_EMAILS_PER_HOUR_PER_SENDER: z.coerce.number().int().positive().default(50),
+  /** Upper bound on recipients in one bulk (CSV) request. */
+  BULK_MAX_RECIPIENTS: z.coerce.number().int().positive().default(1_000),
   /** BullMQ retry policy for transient send failures. */
   JOB_ATTEMPTS: z.coerce.number().int().positive().default(3),
   JOB_BACKOFF_MS: z.coerce.number().int().positive().default(5_000),
