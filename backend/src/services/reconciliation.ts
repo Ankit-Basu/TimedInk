@@ -156,17 +156,18 @@ export function createDefaultReconciliationDeps(): ReconciliationDeps {
 export async function runBootReconciliation(): Promise<ReconciliationSummary> {
   const summary = await reconcilePendingEmails(createDefaultReconciliationDeps());
 
+  const errorSummary = summary.errors > 0 ? `${summary.errors} failed` : '0 issues';
   log.info(
     {
       candidates: summary.candidates,
       requeued: summary.requeued,
       flaggedStale: summary.flaggedStale,
-      errors: summary.errors,
+      failedCount: summary.errors,
       durationMs: summary.durationMs,
       staleThresholdMinutes: env.STALE_CATCHUP_THRESHOLD_MINUTES,
     },
     `reconciliation complete: ${summary.requeued} job(s) re-queued, ` +
-      `${summary.flaggedStale} flagged stale, ${summary.errors} error(s) ` +
+      `${summary.flaggedStale} flagged stale, ${errorSummary} ` +
       `from ${summary.candidates} candidate(s) in ${summary.durationMs}ms`,
   );
 
