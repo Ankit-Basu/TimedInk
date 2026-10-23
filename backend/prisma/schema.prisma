@@ -14,7 +14,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -45,7 +45,7 @@ model User {
   name         String
   // Google OAuth identity (the ID token's `sub`) and profile picture.
   googleId     String?  @unique
-  avatarUrl    String?  @db.Text
+  avatarUrl    String?
   createdAt    DateTime @default(now())
 
   mailboxes       Mailbox[]
@@ -79,9 +79,9 @@ model ScheduledEmail {
   mailboxId   String?
   to          String
   cc          String?
-  subject     String   @db.VarChar(998)
-  bodyHtml    String   @db.Text
-  bodyText    String   @db.Text
+  subject     String
+  bodyHtml    String
+  bodyText    String
   // Always stored in UTC. `timezone` records the IANA zone the user composed
   // in, so we can render the original wall-clock time back to them.
   scheduledAt DateTime
@@ -89,9 +89,9 @@ model ScheduledEmail {
 
   status      EmailStatus @default(PENDING)
   attempts    Int         @default(0)
-  lastError   String?     @db.Text
+  lastError   String?
   bullJobId   String?
-  previewUrl  String?     @db.Text
+  previewUrl  String?
 
   // Bonus A — informational only, never blocks a send.
   deliverabilityScore Int?

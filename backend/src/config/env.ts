@@ -22,7 +22,7 @@ const envSchema = z.object({
   /** Comma-separated list of allowed browser origins. */
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DATABASE_URL: z.string().default('file:./dev.db'),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
   /**

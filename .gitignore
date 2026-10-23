@@ -8,6 +8,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# database files
+*.db
+*.db-journal
+
 # env / secrets — never commit real credentials
 .env
 .env.local

@@ -1,10 +1,8 @@
-# Deploying TimedInk for free
+# Deploying TimedInk
 
-Backend on **Render**, frontend on **Vercel**, MySQL on **Aiven**, Redis on **Render Key Value**.
-All four have genuine free tiers — no card required for Vercel or Aiven; Render asks for one but
-does not charge on the free plan.
+Backend on **Render**, frontend on **Vercel**, Redis on **Render Key Value**, with zero-config embedded **SQLite** (no external MySQL database setup or cloud provider required!).
 
-Budget about **35 minutes** end to end, most of it waiting on the Aiven database to provision.
+Budget about **5 minutes** end to end.
 
 ---
 

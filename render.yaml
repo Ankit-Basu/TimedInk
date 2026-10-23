@@ -23,8 +23,8 @@ services:
     # devDependencies, and that is where @types/* live. `prisma generate`
     # must run before tsc, because the build imports the generated client.
     buildCommand: npm ci --include=dev && npx prisma generate && npm run build
-    # Migrations run at start, not at build — the build step has no database.
-    startCommand: npx prisma migrate deploy && node dist/server.js
+    # Database sync and seed run at start. SQLite file is embedded; no external DB needed.
+    startCommand: npx prisma db push && npm run seed && node dist/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -52,9 +52,9 @@ services:
           name: timedink-redis
           property: connectionString
 
-      # Paste these in the dashboard — they are secrets or deploy-specific.
+      # Zero-config embedded SQLite database — no external MySQL provider required.
       - key: DATABASE_URL
-        sync: false
+        value: "file:./dev.db"
       - key: APP_BASE_URL
         sync: false
       - key: CORS_ORIGIN
