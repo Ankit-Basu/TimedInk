@@ -211,7 +211,7 @@ export default function AuthLanding({ card, defaultOpen = false }: { card: React
               Features
             </a>
             <button type="button" onClick={openAuth} className="btn-dark h-9 cursor-pointer rounded-xl px-4 text-[13px] font-semibold">
-              Open app
+              Sign in
             </button>
           </div>
         </nav>
@@ -256,7 +256,7 @@ export default function AuthLanding({ card, defaultOpen = false }: { card: React
               <div data-hero className="mt-10 flex flex-wrap items-center gap-3">
                 <Magnet padding={60} magnetStrength={3}>
                   <button type="button" onClick={openAuth} className="btn-primary h-12 cursor-pointer rounded-2xl px-6 text-[15px] font-semibold">
-                    Start scheduling →
+                    Sign in →
                   </button>
                 </Magnet>
                 <a href="#pipeline" className="btn-dark inline-flex h-12 items-center rounded-2xl px-6 text-[15px] font-semibold">
@@ -394,7 +394,7 @@ export default function AuthLanding({ card, defaultOpen = false }: { card: React
             <div className="mt-9 flex justify-center">
               <Magnet padding={60} magnetStrength={3}>
                 <button type="button" onClick={openAuth} className="btn-primary h-12 cursor-pointer rounded-2xl px-7 text-[15px] font-semibold">
-                  Open the dashboard →
+                  Sign in to console →
                 </button>
               </Magnet>
             </div>

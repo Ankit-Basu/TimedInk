@@ -42,9 +42,8 @@ export default function SendPass() {
 
   return (
     <div ref={tiltRef} className="will-change-transform">
-      <div className="float-slow" style={{ animationDuration: '7s' }}>
-        <div className="glass-strong relative flex w-[min(460px,88vw)] -rotate-[5deg] overflow-hidden rounded-[22px] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9)]">
-          {/* Live edge. */}
+      <div className="glass-strong relative flex w-[min(460px,88vw)] -rotate-[5deg] overflow-hidden rounded-[22px] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9)]">
+        {/* Live edge. */}
           <span className="absolute top-6 bottom-6 left-0 w-[3px] rounded-r-full bg-teal shadow-[0_0_18px_rgb(61_219_176/0.8)]" aria-hidden="true" />
 
           <div className="min-w-0 flex-1 py-6 pr-5 pl-7">
@@ -104,6 +103,5 @@ export default function SendPass() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

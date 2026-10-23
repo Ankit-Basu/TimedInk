@@ -229,29 +229,31 @@ const SpotlightCard = ({
     };
     wakeRef.current = wake;
 
-    const onMove = (event: PointerEvent) => {
-      if (!state.visible) return;
+    const onEnter = (event: PointerEvent) => {
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       pointer.active = true;
-      if (state.presence > 0 || settingsRef.current.proximity > 0 || root.contains(event.target as Node | null)) wake();
+      wake();
     };
-    const onOut = (event: PointerEvent) => {
-      if (event.relatedTarget) return;
+    const onMove = (event: PointerEvent) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.active = true;
+      wake();
+    };
+    const onLeave = () => {
       pointer.active = false;
+      state.pressed = false;
       wake();
     };
     const onDown = (event: PointerEvent) => {
-      if (!state.visible) return;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       pointer.active = true;
       state.pressed = true;
       wake();
     };
-    const onUp = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') pointer.active = false;
-      if (!state.pressed && event.pointerType === 'mouse') return;
+    const onUp = () => {
       state.pressed = false;
       wake();
     };
@@ -268,27 +270,26 @@ const SpotlightCard = ({
 
     const observer = new IntersectionObserver(entries => {
       state.visible = entries.some(entry => entry.isIntersecting);
-      if (state.visible) wake();
+      if (state.visible && (pointer.active || settingsRef.current.ambient)) wake();
     });
     observer.observe(root);
-    window.addEventListener('pointermove', onMove, { passive: true });
-    window.addEventListener('pointerup', onUp, { passive: true });
-    window.addEventListener('pointercancel', onUp, { passive: true });
-    document.addEventListener('pointerout', onOut, { passive: true });
+    root.addEventListener('pointerenter', onEnter, { passive: true });
+    root.addEventListener('pointermove', onMove, { passive: true });
+    root.addEventListener('pointerleave', onLeave, { passive: true });
     root.addEventListener('pointerdown', onDown, { passive: true });
+    window.addEventListener('pointerup', onUp, { passive: true });
     root.addEventListener('focusin', onFocusIn);
     root.addEventListener('focusout', onFocusOut);
-    wake();
 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
       observer.disconnect();
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-      document.removeEventListener('pointerout', onOut);
+      root.removeEventListener('pointerenter', onEnter);
+      root.removeEventListener('pointermove', onMove);
+      root.removeEventListener('pointerleave', onLeave);
       root.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointerup', onUp);
       root.removeEventListener('focusin', onFocusIn);
       root.removeEventListener('focusout', onFocusOut);
       wakeRef.current = null;

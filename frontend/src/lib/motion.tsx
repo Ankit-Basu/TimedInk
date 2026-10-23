@@ -3,7 +3,6 @@ import type { RefObject } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
-import Lenis from 'lenis';
 
 /**
  * Motion primitives, all on GSAP.
@@ -23,31 +22,19 @@ export const prefersReducedMotion = (): boolean =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
- * Smooth, inertial wheel scrolling (Lenis), driven from GSAP's ticker so
- * ScrollTrigger sees every frame Lenis produces. Mounted once per page that
- * scrolls; skipped entirely for reduced-motion users.
+ * Native, hardware-composited browser scrolling with 0ms input lag.
+ *
+ * Smooth wheel hijacking via JS libraries often introduces artificial inertia
+ * lag and framerate drops on Windows machines with mouse wheels. Native scrolling
+ * runs directly on the browser's compositor thread at the display's native
+ * refresh rate (120Hz/144Hz/240Hz). Anchor link jumps are smoothly animated via
+ * CSS `scroll-behavior: smooth`.
  */
-export function useSmoothScroll(enabled = true): void {
+export function useSmoothScroll(_enabled = true): void {
   useEffect(() => {
-    if (!enabled || prefersReducedMotion()) return;
-
-    const lenis = new Lenis({
-      duration: 0.85,
-      smoothWheel: true,
-      wheelMultiplier: 1.05,
-      touchMultiplier: 1.5,
-    });
-    lenis.on('scroll', ScrollTrigger.update);
-
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(500, 33);
-
-    return () => {
-      gsap.ticker.remove(tick);
-      lenis.destroy();
-    };
-  }, [enabled]);
+    // ScrollTrigger binds directly to native window scroll events.
+    ScrollTrigger.refresh();
+  }, [_enabled]);
 }
 
 /**

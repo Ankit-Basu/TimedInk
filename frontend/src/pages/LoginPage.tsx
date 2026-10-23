@@ -11,7 +11,7 @@ import AuthLanding from './AuthLanding';
 /** Matches prisma/seed.ts so a reviewer never has to guess. */
 const DEMO = { email: 'demo@timedink.dev', password: 'demo1234' };
 
-export default function LoginPage() {
+export default function LoginPage({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,7 +49,7 @@ export default function LoginPage() {
 
   return (
     <AuthLanding
-      defaultOpen
+      defaultOpen={defaultOpen}
       card={
         <AuthCard title="Welcome back" subtitle="Sign in to your scheduling console.">
           <GoogleButton redirectTo={from} />

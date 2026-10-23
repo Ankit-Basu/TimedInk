@@ -40,7 +40,8 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<LoginPage defaultOpen={false} />} />
+      <Route path="/login" element={<LoginPage defaultOpen={true} />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/dashboard"
@@ -50,7 +51,7 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
