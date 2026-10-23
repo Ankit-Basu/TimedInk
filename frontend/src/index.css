@@ -21,16 +21,16 @@
   --color-night-2: #130d1d;
   --color-night-3: #1b1428;
 
-  /* Warm cream ink. ink-3 measures ~5:1 on night-2. */
-  --color-ink: #f7efe3;
-  --color-ink-2: #d2c6b6;
-  --color-ink-3: #9d9184;
+  /* Warm cream ink. High contrast for dark theme readability. */
+  --color-ink: #fbf6ee;
+  --color-ink-2: #e4dbcf;
+  --color-ink-3: #baa997;
 
-  --color-glass: rgb(255 244 230 / 0.035);
-  --color-glass-2: rgb(255 244 230 / 0.06);
-  --color-glass-3: rgb(255 244 230 / 0.1);
-  --color-edge: rgb(255 240 220 / 0.09);
-  --color-edge-strong: rgb(255 240 220 / 0.17);
+  --color-glass: rgb(255 244 230 / 0.05);
+  --color-glass-2: rgb(255 244 230 / 0.08);
+  --color-glass-3: rgb(255 244 230 / 0.12);
+  --color-edge: rgb(255 240 220 / 0.18);
+  --color-edge-strong: rgb(255 240 220 / 0.28);
 
   /* Brand. Amber is the accent; ember deepens it; plum gives depth; teal is "live". */
   --color-amber: #ffb547;

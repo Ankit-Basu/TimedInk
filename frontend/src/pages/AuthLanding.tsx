@@ -306,14 +306,14 @@ export default function AuthLanding({ card, defaultOpen = false }: { card: React
                   spotlightColor="rgba(255, 181, 71, 0.28)"
                   style={
                     {
-                      '--spotlight-card-surface': 'rgba(24, 17, 34, 0.82)',
-                      '--spotlight-card-border': 'rgba(255,240,220,0.09)',
+                      '--spotlight-card-surface': 'rgba(24, 17, 34, 0.92)',
+                      '--spotlight-card-border': 'rgba(255,240,220,0.18)',
                     } as React.CSSProperties
                   }
                 >
                   <FeatureIcon d={feature.icon} />
-                  <h3 className="headline mt-6 text-[1.6rem]">{feature.title}</h3>
-                  <p className="mt-2.5 text-[13.5px] leading-relaxed text-ink-3">{feature.body}</p>
+                  <h3 className="headline mt-6 text-[1.6rem] text-ink">{feature.title}</h3>
+                  <p className="mt-2.5 text-[14px] leading-relaxed text-ink-2">{feature.body}</p>
                 </SpotlightCard>
               </div>
             ))}
@@ -330,22 +330,27 @@ export default function AuthLanding({ card, defaultOpen = false }: { card: React
           </div>
 
           <div data-pipeline className="relative mt-16">
-            <div className="absolute top-[26px] right-0 left-0 hidden h-px bg-white/10 lg:block" aria-hidden="true">
-              <div data-progress className="h-full origin-left bg-gradient-to-r from-amber via-ember to-plum" />
+            <div className="absolute top-[26px] left-[26px] right-[calc(25%-20px)] hidden h-[2px] bg-white/20 lg:block" aria-hidden="true">
+              <div data-progress className="h-full origin-left bg-gradient-to-r from-amber via-ember to-teal shadow-[0_0_12px_rgba(255,181,71,0.6)]" />
             </div>
             <ol className="grid gap-5 lg:grid-cols-4">
               {STEPS.map((step) => (
                 <li
                   key={step.k}
                   data-step
-                  className="group relative [&.is-lit_.step-card]:border-amber/30 [&.is-lit_.step-dot]:border-transparent [&.is-lit_.step-dot]:bg-gradient-to-b [&.is-lit_.step-dot]:from-[#ffc56b] [&.is-lit_.step-dot]:to-ember [&.is-lit_.step-dot]:text-night [&.is-lit_.step-dot]:shadow-[0_0_30px_rgb(255_165_60/0.55)]"
+                  className="group relative [&.is-lit_.step-card]:border-amber/50 [&.is-lit_.step-card]:shadow-[0_0_35px_rgba(255,181,71,0.2)] [&.is-lit_.step-dot]:border-amber [&.is-lit_.step-dot]:bg-gradient-to-b [&.is-lit_.step-dot]:from-[#ffc86b] [&.is-lit_.step-dot]:to-ember [&.is-lit_.step-dot]:text-night [&.is-lit_.step-dot]:shadow-[0_0_30px_rgb(255_175_70/0.8)]"
                 >
-                  <span className="step-dot glass mono relative z-10 grid h-[52px] w-[52px] place-items-center rounded-2xl text-sm font-semibold text-ink-2 transition-all duration-500">
+                  <span className="step-dot mono relative z-10 grid h-[52px] w-[52px] place-items-center rounded-2xl border-2 border-amber/50 bg-[#161022] text-base font-bold text-amber shadow-[0_0_15px_rgba(255,181,71,0.18)] transition-all duration-500">
                     {step.k}
                   </span>
-                  <div className="step-card glass mt-5 rounded-2xl p-6 transition-all duration-500">
-                    <h3 className="headline text-2xl">{step.title}</h3>
-                    <p className="mt-2 text-[13.5px] leading-relaxed text-ink-3">{step.body}</p>
+                  <div className="step-card mt-5 rounded-2xl border border-white/20 bg-night-2/95 p-6 shadow-2xl backdrop-blur-md transition-all duration-500 hover:border-amber/50 hover:shadow-[0_0_25px_rgba(255,181,71,0.12)]">
+                    <div className="flex items-center justify-between">
+                      <h3 className="headline text-2xl font-semibold tracking-wide text-ink">{step.title}</h3>
+                      <span className="mono rounded-md border border-amber/35 bg-amber/15 px-2 py-0.5 text-[11px] font-bold text-amber">
+                        STEP {step.k}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-[14.5px] leading-relaxed text-ink-2">{step.body}</p>
                   </div>
                 </li>
               ))}
