@@ -14,7 +14,7 @@ const log = childLogger('worker');
  *
  * On a host that only gives you one process — Render's free tier, for example —
  * set WORKER_INLINE=true and the API starts this same worker itself. See
- * DEPLOYMENT.md.
+ * README.md.
  */
 async function main(): Promise<void> {
   const worker = startEmailWorker();

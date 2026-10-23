@@ -69,7 +69,7 @@ const envSchema = z.object({
    * Run the BullMQ worker inside the API process instead of as its own service.
    * Off by default — a dedicated worker is the right topology. Turn it on for
    * hosts that only allow a single process (Render's free tier). See
-   * DEPLOYMENT.md.
+   * README.md.
    */
   WORKER_INLINE: booleanish.default(false),
   /** Simulated provider send-rate cap: RATE_LIMIT_MAX sends per DURATION_MS. */

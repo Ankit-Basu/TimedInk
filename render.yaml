@@ -1,17 +1,12 @@
-# Render Blueprint — optional convenience.
+# Render Blueprint for TimedInk.
 #
-# Render's dashboard walkthrough in DEPLOYMENT.md is the authoritative path and
-# does not need this file. Use it if you prefer "New → Blueprint" and pointing
-# Render at the repo.
+# Runs the Express backend with inline BullMQ worker and zero-config embedded SQLite.
+# Paired with Render Key Value for BullMQ delayed queue processing.
 #
-# What it does NOT create: the MySQL database. Render does not offer MySQL, so
-# that comes from Aiven (or any provider) and its URL is pasted in as a secret.
-#
-# NOTE ON THE FREE TIER
-# A free web service sleeps after ~15 minutes without traffic, and a sleeping
-# process sends nothing. The boot reconciler replays the backlog on wake, so
-# nothing is lost, but delivery is late. DEPLOYMENT.md covers the keep-alive
-# ping that avoids this.
+# NOTE ON THE FREE TIER:
+# A free web service sleeps after ~15 minutes without traffic.
+# The boot reconciler replays the backlog on wake, so nothing is lost.
+# A 10-minute cron-job.org ping to /health keeps it awake.
 
 services:
   - type: web

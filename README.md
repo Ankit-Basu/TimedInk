@@ -14,7 +14,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 <p>
   <img alt="TypeScript, strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img alt="Node 22" src="https://img.shields.io/badge/Node-22-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" />
-  <img alt="Prisma with MySQL 8" src="https://img.shields.io/badge/Prisma-MySQL%208-2D3748?style=flat-square&logo=prisma&logoColor=white" />
+  <img alt="Prisma ORM" src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma&logoColor=white" />
   <img alt="BullMQ on Redis 7" src="https://img.shields.io/badge/BullMQ-Redis%207-DC382D?style=flat-square&logo=redis&logoColor=white" />
   <img alt="React 19" src="https://img.shields.io/badge/React-19-087EA4?style=flat-square&logo=react&logoColor=white" />
   <img alt="73 tests passing" src="https://img.shields.io/badge/tests-73%20passing-E5A13C?style=flat-square" />
@@ -22,7 +22,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 
 <br />
 
-**[Live app](https://timed-ink.vercel.app)** · **[API](https://timedink.onrender.com/health)** · **[Demo script](DEMO_SCRIPT.md)** · **[Assumptions](ASSUMPTIONS.md)**
+**[Live App](https://timed-ink.vercel.app)** · **[Live API](https://timedink.onrender.com/health)** · **[Demo Video Script](DEMO_SCRIPT.md)** · **[Assumptions & Architecture](ASSUMPTIONS.md)**
 
 <br />
 
@@ -122,20 +122,17 @@ The shrinking delays are the reconciler recomputing `scheduledAt - now` on each 
 
 ## Quick start
 
-**Prerequisites:** Node 22+, Docker Desktop. Nothing else — no local MySQL, no local Redis, and
-no email credentials (the app provisions its own Ethereal inbox on first boot).
+**Prerequisites:** Node 22+, and Redis (via `docker compose up -d` or a local/cloud Redis). No external MySQL database setup required — SQLite is embedded out of the box.
 
 ```bash
+# 1. Start Redis
 docker compose up -d
-```
 
-```bash
+# 2. Setup backend
 cd backend && npm install && cp .env.example .env
-```
 
-```bash
-npx prisma migrate deploy && npm run seed
-```
+# 3. Synchronize database schema & seed demo account
+npx prisma db push && npm run seed
 
 Now start the **API** and the **worker** in two terminals:
 
@@ -824,50 +821,22 @@ cd backend && npx prisma migrate reset --force && npm run seed
 
 ## Deploying
 
-It is deployed:
+The project is live in production:
 
-| | |
-| --- | --- |
-| **App** | <https://timed-ink.vercel.app> — Vercel, static SPA |
-| **API** | <https://timedink.onrender.com> — Render, free web service |
-| **Database** | Aiven MySQL, free plan |
-| **Queue** | Render Key Value (Redis), free plan |
+| Service | Destination | Notes |
+| --- | --- | --- |
+| **Frontend** | <https://timed-ink.vercel.app> | Vercel, static React 19 SPA with `/api/*` rewrite |
+| **Backend API** | <https://timedink.onrender.com> | Render Web Service (`node dist/server.js`) |
+| **Database** | Embedded SQLite (`file:./dev.db`) | Zero-config, persistent, self-contained |
+| **Queue** | Render Key Value (Redis) | BullMQ delayed queue processing |
 
-[`HOSTING.md`](HOSTING.md) is the 20-minute copy-paste path; [`DEPLOYMENT.md`](DEPLOYMENT.md) is
-the same ground with troubleshooting and the reasoning. A [`render.yaml`](render.yaml) blueprint
-and [`frontend/vercel.json`](frontend/vercel.json) are already in the repo.
+A [`render.yaml`](render.yaml) blueprint and [`frontend/vercel.json`](frontend/vercel.json) are included in the repository.
 
-**Three things about the free tier**, all verified on the live instance rather than assumed:
+### Production Environment Settings
 
-- **`WORKER_INLINE=true`** runs the BullMQ worker inside the API process. Render's free plan has
-  no background workers, so a single-service deploy needs it. It is off by default because a
-  dedicated worker is the right topology — inline means a slow SMTP send adds latency to HTTP
-  requests.
-- **The service sleeps after ~15 minutes** and a sleeping process sends nothing. The boot
-  reconciler replays the backlog on wake so nothing is lost, but delivery is late; a free
-  10-minute keep-alive ping removes the problem. The same design that survives a wiped Redis is
-  what makes free hosting viable at all.
-- **Outbound SMTP is blocked on the free plan**, so the deployed instance schedules, queues and
-  retries correctly but cannot complete a send. The same instance reaches Aiven MySQL on port
-  22852 without trouble while `smtp.ethereal.email:587` times out — a port block, not a bug.
-  Delivery is demonstrated locally; [`DEPLOYMENT.md`](DEPLOYMENT.md) carries the port-2525
-  workaround for anyone who wants the hosted instance sending too.
-
-That last one had an upside: it exercised the retry path against a genuine network failure —
-three attempts with exponential backoff, then `FAILED` with the error preserved and the whole
-sequence visible in the email's timeline. That behaviour was previously implemented but never
-tested against a real outage.
-
-Two things are worth knowing before you read it:
-
-- **`WORKER_INLINE=true`** runs the BullMQ worker inside the API process. Render's free plan has
-  no background workers, so a single-service deploy needs it. It is off by default because a
-  dedicated worker is the right topology — inline means a slow SMTP send adds latency to HTTP
-  requests.
-- **A free Render service sleeps after ~15 minutes** and a sleeping process sends nothing. The
-  boot reconciler replays the backlog on wake so nothing is lost, but delivery is late; a free
-  10-minute keep-alive ping removes the problem. The same design that survives a wiped Redis is
-  what makes free hosting viable at all.
+- **`WORKER_INLINE=true`**: Runs the BullMQ worker inside the API process. Render's free plan provides one web service without background workers, so inline mode combines API + queue processing in a single instance.
+- **Boot Reconciliation**: If the free web service spins down after inactivity, the boot reconciler replays any pending or queued jobs upon wake so no emails are lost or sent twice.
+- **Port Binding**: Render exposes `PORT=10000`, which Express automatically binds to. Health checks are served at `/health`.
 
 ---
 
