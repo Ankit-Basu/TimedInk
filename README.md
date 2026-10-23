@@ -26,6 +26,10 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 
 <br />
 
+<p align="center">
+  <img src="docs/images/hero.png" alt="TimedInk Landing Interface" width="100%" />
+</p>
+
 </div>
 
 ---
@@ -33,7 +37,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 | | |
 | --- | --- |
 | **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real, viewable preview link |
-| **Tests** | 73, hermetic — no MySQL, Redis or SMTP needed to run them |
+| **Tests** | 73, hermetic — no database, Redis or SMTP needed to run them |
 | **Clone → running** | ~4 minutes, five commands |
 
 ---
@@ -118,6 +122,10 @@ OPENED    2026-08-31 02:41   pixel
 
 The shrinking delays are the reconciler recomputing `scheduledAt - now` on each boot.
 
+<p align="center">
+  <img src="docs/images/audit-drawer.png" alt="Email Audit Drawer and Event Timeline" width="100%" />
+</p>
+
 ---
 
 ## Quick start
@@ -133,6 +141,7 @@ cd backend && npm install && cp .env.example .env
 
 # 3. Synchronize database schema & seed demo account
 npx prisma db push && npm run seed
+```
 
 Now start the **API** and the **worker** in two terminals:
 
@@ -304,20 +313,24 @@ Three processes, two datastores:
        └───────────────────────┼────────────────────────────────┘
                                ▼                                ▼
                         ┌─────────────┐                  ┌─────────────┐
-                        │   MySQL     │ ◀─── truth ───▶  │    Redis    │
-                        │  (Prisma)   │                  │  (BullMQ)   │
+                        │  Database   │ ◀─── truth ───▶  │    Redis    │
+                        │(SQLite/SQL) │                  │  (BullMQ)   │
                         └─────────────┘                  └─────────────┘
 ```
 
-The single most important decision: **MySQL is the source of truth, Redis is a derived index of
+The single most important decision: **The database is the source of truth, Redis is a derived index of
 outstanding work.** Every scheduled email exists as a row before any job exists, and the queue
 can be rebuilt from the database at any moment. Nothing that matters lives only in Redis.
 
 ### Scheduling
 
+<p align="center">
+  <img src="docs/images/pipeline.png" alt="Four Steps: Compose, Persist, Enqueue, Deliver" width="100%" />
+</p>
+
 `POST /api/emails` does four things, in this order, and the order *is* the design:
 
-1. **Write the row to MySQL as `PENDING`.** Nothing has touched Redis yet; at this point the
+1. **Write the row to the database as `PENDING`.** Nothing has touched Redis yet; at this point the
    user's intent is durable.
 2. **Compute `delay = scheduledAt - now`**, clamped at zero. `scheduledAt` is always an absolute
    UTC instant — the browser converts the picker's local wall-clock before sending. `timezone` is
@@ -619,17 +632,31 @@ is lit by a prismatic burst behind a floating "send pass" ticket whose status cy
 Queued → Sending → Sent; the closing section sits under falling light rays; the dashboard has a
 slow dark veil behind dark, near-opaque cards. Amber is reserved for the primary action.
 
-- **Signed out**, `/login` is a scrolling product page, with sign-in in a slide-over panel: a
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="Live Send Queue & Pacing Dashboard" width="100%" />
+</p>
+
+- **Signed out**, `/login` is a scrolling product page, with sign-in in a centered dialog: a
   split-text headline, spotlight feature cards, a scroll-scrubbed four-step pipeline, a sentence
   that lights up word by word as you scroll, and stats that count up when they enter the viewport.
-- **Signed in**, the dashboard header shows the user's Google avatar, name and email; status cards
+
+  <p align="center">
+    <img src="docs/images/login.png" alt="Centered Sign-in Dialog" width="60%" />
+  </p>
+
+- **Signed in**, the dashboard header shows the user's avatar, name and email; status cards
   count up and double as tab switches; the segmented tabs have a gliding indicator; rows cascade in
   when the result set changes (not on every poll); the compose dialog and detail drawer animate in
   with GSAP; toasts spring in and blur out.
 - **Compose** has two modes: a single email, or **Bulk from CSV**. Drop a CSV or .txt and the
   addresses are extracted in the browser wherever they sit in the file and de-duplicated, with a
   live count, a preview of the first few, delay-between-emails and hourly-limit fields, and the
-  computed time of the first and last send before you submit.
+  computed time of the first and last send before you submit. It includes a real-time deliverability
+  heuristic gauge scoring spam words, subject length, and capitalization.
+
+  <p align="center">
+    <img src="docs/images/compose.png" alt="Compose Modal with Real-time Deliverability Scoring" width="100%" />
+  </p>
 
 **Keeping it fast.** Each shader is lazy-loaded out of the first chunk, renders at DPR 1 (it is a
 soft effect; 3× retina pixels buy nothing), pauses when off-screen and under
@@ -708,7 +735,7 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `mysql://root:outbox@localhost:3307/outbox_pilot` | Prisma connection |
+| `DATABASE_URL` | `file:./dev.db` | Prisma database (SQLite embedded default, or MySQL) |
 | `REDIS_URL` | `redis://localhost:6379` | BullMQ + warmup counters |
 | `JWT_SECRET` | *(placeholder)* | must be ≥ 16 chars |
 | `ETHEREAL_USER` / `_PASS` | *(auto-provisioned)* | pin to keep one Ethereal inbox |
