@@ -123,14 +123,21 @@ async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
-  const parsed: unknown = text ? JSON.parse(text) : {};
+  let parsed: any = {};
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { error: { message: response.status === 429 ? 'Server is busy or waking up from sleep. Please wait a few seconds and try again.' : (text.slice(0, 200) || response.statusText) } };
+    }
+  }
 
   if (!response.ok) {
     const body = parsed as { error?: { code?: string; message?: string; details?: unknown } };
     throw new ApiError(
       response.status,
-      body.error?.code ?? 'UNKNOWN',
-      body.error?.message ?? response.statusText,
+      body.error?.code ?? (response.status === 429 ? 'RATE_LIMITED' : 'UNKNOWN'),
+      body.error?.message ?? (response.status === 429 ? 'Too many requests. Please wait a moment.' : response.statusText),
       body.error?.details,
     );
   }
