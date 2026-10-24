@@ -26,6 +26,8 @@ const GoogleMark = () => (
  * Without one, a look-alike button explains what to configure instead of
  * failing silently — so the login page never shows a dead control.
  */
+const DEFAULT_GOOGLE_CLIENT_ID = '1070657574864-rddgbuh86nb7979qvoiso8td542b2nag.apps.googleusercontent.com';
+
 export default function GoogleButton({ redirectTo = '/dashboard' }: { redirectTo?: string }) {
   const { loginWithGoogle } = useAuth();
   const { showToast } = useToast();
@@ -34,8 +36,13 @@ export default function GoogleButton({ redirectTo = '/dashboard' }: { redirectTo
   const [ready, setReady] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
 
-  const config = useQuery({ queryKey: ['auth-config'], queryFn: () => api.authConfig(), staleTime: Infinity });
-  const clientId = config.data?.googleClientId ?? null;
+  const config = useQuery({
+    queryKey: ['auth-config'],
+    queryFn: () => api.authConfig().catch(() => ({ googleClientId: DEFAULT_GOOGLE_CLIENT_ID })),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const clientId = config.data?.googleClientId || DEFAULT_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     if (!clientId) return;

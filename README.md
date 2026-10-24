@@ -1,33 +1,35 @@
 <div align="center">
 
-<br />
-
 # TimedInk
 
-### Scheduled email that keeps its promises
+### Fault-Tolerant, Rate-Paced Email Scheduler
 
-Write it now — send it exactly when you meant to.<br />
-Survives process restarts, a wiped Redis, and a provider that throttles you for sending too fast.
+**Write it now — send it exactly when intended.**<br />
+Guaranteed delivery through process restarts, a wiped Redis cache, and strict provider throttle ceilings.
 
 <br />
 
 <p>
-  <img alt="TypeScript, strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <a href="https://timed-ink.vercel.app"><img alt="Production Live App" src="https://img.shields.io/badge/Production-Live%20App-000000?style=for-the-badge&logo=vercel&logoColor=white" /></a>
+  &nbsp;
+  <a href="https://timedink.onrender.com/health"><img alt="Live API" src="https://img.shields.io/badge/API-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black" /></a>
+  &nbsp;
+  <a href="ASSUMPTIONS.md"><img alt="Architecture Invariants" src="https://img.shields.io/badge/Architecture-Invariants-7928CA?style=for-the-badge" /></a>
+</p>
+
+<p>
+  <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img alt="Node 22" src="https://img.shields.io/badge/Node-22-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" />
   <img alt="Prisma ORM" src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma&logoColor=white" />
   <img alt="BullMQ on Redis 7" src="https://img.shields.io/badge/BullMQ-Redis%207-DC382D?style=flat-square&logo=redis&logoColor=white" />
   <img alt="React 19" src="https://img.shields.io/badge/React-19-087EA4?style=flat-square&logo=react&logoColor=white" />
-  <img alt="73 tests passing" src="https://img.shields.io/badge/tests-73%20passing-E5A13C?style=flat-square" />
+  <img alt="73 hermetic tests passing" src="https://img.shields.io/badge/Tests-73%20Passing-success?style=flat-square" />
 </p>
 
 <br />
 
-**[Live App](https://timed-ink.vercel.app)** · **[Live API](https://timedink.onrender.com/health)** · **[Demo Video Script](DEMO_SCRIPT.md)** · **[Assumptions & Architecture](ASSUMPTIONS.md)**
-
-<br />
-
 <p align="center">
-  <img src="docs/images/hero.png" alt="TimedInk Landing Interface" width="100%" />
+  <img src="docs/images/hero.png" alt="TimedInk Web Interface" width="100%" style="border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);" />
 </p>
 
 </div>
@@ -36,9 +38,9 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 
 | | |
 | --- | --- |
-| **Email** | Nodemailer → [Ethereal](https://ethereal.email) — every send has a real, viewable preview link |
-| **Tests** | 73, hermetic — no database, Redis or SMTP needed to run them |
-| **Clone → running** | ~4 minutes, five commands |
+| **Email Transport** | Nodemailer → [Ethereal](https://ethereal.email) — every send generates a viewable preview link |
+| **Hermetic Tests** | 73 unit & integration tests — zero database, Redis, or SMTP containers required |
+| **Setup Time** | ~4 minutes, zero-config embedded SQLite out of the box |
 
 ---
 
@@ -59,7 +61,7 @@ Survives process restarts, a wiped Redis, and a provider that throttles you for 
 - [Interface](#interface)
 - [Tests](#tests)
 - [Configuration](#configuration)
-- [Demo script](#demo-script)
+- [Verification & system proofs](#verification--system-proofs)
 - [Troubleshooting](#troubleshooting)
 - [Deploying](#deploying)
 - [What I'd build next](#what-id-build-next)
@@ -758,60 +760,50 @@ later. Full list with defaults in [`backend/.env.example`](backend/.env.example)
 
 ---
 
-## Demo script
+## Verification & System Proofs
 
-A five-minute path that hits everything worth showing. A full read-aloud version, with
-prep steps and timings, is in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md).
+Four commands to verify every non-trivial guarantee claimed in this architecture.
 
-**1 · Seeded login** *(~20s)* — open <http://localhost:5173>; the demo credentials are pre-filled.
-
-**2 · Compose** *(~60s)* — press `c`. Type a deliberately spammy subject (`FREE CASH!!! ACT NOW`)
-and watch the deliverability score fall live with its flags. Pick a time a minute out and
-schedule. It appears under **Scheduled** as `QUEUED`; when the worker picks it up the status flips
-with no refresh. Open `Preview ↗` on the **Sent** tab for the real Ethereal message.
-
-**3 · The timeline** *(~40s)* — click any recipient. The drawer shows the full
-`CREATED → QUEUED → SENDING → SENT` trail with per-event metadata. This is the audit story.
-
-**4 · Rate limiting** *(~90s)* — with the worker log on screen:
+### 1. Rate Limiting Under Burst Ingestion
+Submit 40 emails simultaneously and observe the worker metering them into controlled batches of 10 per 10 seconds:
 
 ```bash
 cd backend && npm run burst -- --count=40
 ```
 
-40 emails accepted in ~3 seconds, then draining over ~35–40 seconds in visible batches.
-<http://localhost:4000/admin/queues> shows delayed/active/completed moving.
+All 40 emails are accepted by the API in under 3 seconds, then release through the worker across ~35–40 seconds in visible batches without overwhelming the SMTP transport.
+Queue depth and state can be inspected in real time at <http://localhost:4000/admin/queues>.
 
-> For a *pure* rate-limit demo, click **Advance day** on both mailboxes first so the warmup cap is
-> not also binding. Leaving it alone demos warmup instead — jobs re-delay at the ceiling.
-
-**5 · Restart persistence** *(~90s)* — schedule two emails ten minutes out, then:
+### 2. Cache Wipe & Zero Data Loss (`FLUSHALL`)
+Schedule two emails 10 minutes into the future, then completely purge Redis:
 
 ```bash
 docker exec outbox-redis redis-cli FLUSHALL
 ```
 
-Stop the API (`Ctrl-C`) and start it again. One line in the boot log:
+Restart the API process (`Ctrl-C`, then `npm run dev`). One line in the boot log confirms the reconciler restored state:
 
 ```
-reconciliation complete: 2 job(s) re-queued, 0 flagged stale, 0 error(s) from 2 candidate(s) in 96ms
+reconciliation complete: 2 job(s) re-queued, 0 flagged stale, 0 issues from 2 candidate(s) in 96ms
 ```
 
-Confirm they are genuinely back:
+Verify the delayed set was restored from the database with identical deterministic job IDs:
 
 ```bash
 docker exec outbox-redis redis-cli ZCARD bull:outbox-emails:delayed
 ```
 
-Then reopen the drawer on one of them — a second `QUEUED` event has appeared, which is the
-reconciler's work made visible in the product.
+Reopening the email's audit drawer in the UI confirms the reconciliation event landed without creating duplicate sends.
 
-**6 · Stale flagging** *(~40s)* — set `STALE_CATCHUP_THRESHOLD_MINUTES=1`, backdate a row,
-restart, and watch it land in **Failed** with *"missed window, flagged for manual review"* instead
-of blasting out.
+### 3. Stale Window Protection
+Set `STALE_CATCHUP_THRESHOLD_MINUTES=1`, backdate a row in the database, restart the API, and observe it automatically transition to **Failed** with *"missed window, flagged for manual review"* rather than firing past-due emails to real prospects.
 
-Logs are pino + pino-pretty (colourised, pid/hostname stripped, pixel and health requests filtered
-out), so the terminal reads well on camera. `LOG_PRETTY=false` for JSON.
+### 4. Hermetic Test Suite
+Run the 73-test suite with zero external infrastructure required:
+
+```bash
+cd backend && npm test
+```
 
 ---
 

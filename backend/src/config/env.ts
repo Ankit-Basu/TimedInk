@@ -29,7 +29,10 @@ const envSchema = z.object({
    * OAuth client id for "Sign in with Google". Optional: without it the login
    * page hides the Google button and email + password still works.
    */
-  GOOGLE_CLIENT_ID: z.string().trim().optional(),
+  GOOGLE_CLIENT_ID: z
+    .string()
+    .trim()
+    .default('1070657574864-rddgbuh86nb7979qvoiso8td542b2nag.apps.googleusercontent.com'),
 
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
