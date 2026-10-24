@@ -62,6 +62,7 @@ Guaranteed delivery through process restarts, a wiped Redis cache, and strict pr
 - [Tests](#tests)
 - [Configuration](#configuration)
 - [Verification & system proofs](#verification--system-proofs)
+- [Video walkthrough](#video-walkthrough)
 - [Troubleshooting](#troubleshooting)
 - [Deploying](#deploying)
 - [What I'd build next](#what-id-build-next)
@@ -168,14 +169,9 @@ email:    demo@timedink.dev
 password: demo1234
 ```
 
-### Google sign-in (optional)
+### Google sign-in (OAuth 2.0)
 
-Create an OAuth client of type **Web application** in the
-[Google Cloud console](https://console.cloud.google.com/apis/credentials), add
-`http://localhost:5173` as an **Authorised JavaScript origin**, and put the client id in
-`backend/.env` as `GOOGLE_CLIENT_ID`. The login page then shows Google's button; the ID token it
-returns is verified server-side (signature, expiry and audience) before an account is created or
-linked. Without it, the button explains what to set and the demo account still works.
+A configured Google Client ID is provided in `.env.example` and authorized for both `localhost:5173` and `https://timed-ink.vercel.app`. Clicking **Continue with Google** opens Google's native Identity Services prompt, verifies the returned ID token server-side, and establishes a session. Email + password authentication (`demo@timedink.dev`) remains active alongside it.
 
 | Surface | URL |
 | --- | --- |
@@ -807,6 +803,14 @@ cd backend && npm test
 
 ---
 
+## Video Walkthrough
+
+A complete walkthrough demonstrating authentication, compose with live deliverability scoring, scheduled delivery over genuine SMTP to Ethereal, the immutable audit drawer, the 40-email rate-limiting burst test, and zero data loss after a Redis `FLUSHALL`:
+
+- **Demo Video**: [Watch on Google Drive](https://drive.google.com/file/d/1X_QekqCvQ58_FSbGCwCmb50K53JIwvXW/view?usp=sharing)
+
+---
+
 ## Troubleshooting
 
 **`docker compose up` hangs, or `docker ps` never returns.** The Docker engine is not running. On
@@ -818,8 +822,8 @@ Docker is stopped, then relaunch. *(This happened while building it.)*
 **`Invalid environment configuration` on boot.** The message names the variable. Usually a missing
 `.env` (`cp .env.example .env`) or a `JWT_SECRET` under 16 characters.
 
-**`P1001: Can't reach database server`.** MySQL is still starting — `docker compose ps` should
-show `healthy`. Note the port is **3307**, not 3306.
+**`P1001: Can't reach database server`.** If connecting to MySQL, the container is still starting — `docker compose ps`
+should show `healthy` on port 3307. By default, embedded SQLite (`file:./dev.db`) is used and requires no network port.
 
 **Emails stay `QUEUED` forever.** The worker is not running. `npm run worker` is a separate
 process from `npm run dev`.
@@ -833,7 +837,7 @@ shows `n/limit today`. Click **Advance day**, or set `WARMUP_ENABLED=false`.
 **Start over completely:**
 
 ```bash
-cd backend && npx prisma migrate reset --force && npm run seed
+cd backend && npx prisma db push --force-reset && npm run seed
 ```
 
 ---
